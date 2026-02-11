@@ -2,10 +2,25 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopNavbar } from './TopNavbar';
 import { FloatingActionButton } from './FloatingActionButton';
-import { useState } from 'react';
+import { MobileDashboard } from './MobileDashboard';
+import { useState, useEffect } from 'react';
 
 export function AppLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  if (isMobile) {
+    return <MobileDashboard />;
+  }
 
   return (
     <div className="flex min-h-screen bg-[#F5F7FA]">
