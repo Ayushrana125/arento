@@ -45,6 +45,16 @@ export function MobileDashboard() {
                 {getDisplayName()}
               </p>
             </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('arento_user');
+                window.location.href = '/';
+              }}
+              className="text-sm text-red-600 hover:text-red-700 font-medium px-3 py-1.5 border border-red-300 rounded-lg hover:bg-red-50 transition"
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>
