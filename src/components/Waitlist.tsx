@@ -19,16 +19,18 @@ export function Waitlist() {
     setIsLoading(true);
 
     try {
-      const { error: submitError } = await supabase
-        .from("waitlist_submissions")
-        .insert([
-          {
-            name: formData.name,
-            email: formData.email,
-          },
-        ]);
+      if (supabase) {
+        const { error: submitError } = await supabase
+          .from("waitlist_submissions")
+          .insert([
+            {
+              name: formData.name,
+              email: formData.email,
+            },
+          ]);
 
-      if (submitError) throw submitError;
+        if (submitError) throw submitError;
+      }
 
       setIsSubmitted(true);
       setFormData({ name: "", email: "" });
