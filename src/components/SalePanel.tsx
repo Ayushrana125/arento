@@ -1,5 +1,6 @@
 import { X, Plus, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface SalePanelProps {
   isOpen: boolean;
@@ -28,13 +29,12 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<SaleItem[]>([
     { id: '1', sku: '', quantity: 1, price: 0, subtotal: 0 },
-    { id: '2', sku: '', quantity: 1, price: 0, subtotal: 0 },
-    { id: '3', sku: '', quantity: 1, price: 0, subtotal: 0 },
   ]);
   const [searchResults, setSearchResults] = useState<{ [key: string]: typeof mockInventory }>({});
   const [activeSearch, setActiveSearch] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const firstSkuInputRef = useRef<HTMLInputElement>(null);
+  const { addNotification } = useNotification();
 
   useEffect(() => {
     if (isOpen) {
@@ -136,6 +136,14 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const itemsList = items
+      .filter(item => item.sku && item.quantity > 0)
+      .map(item => `${item.sku} (Qty: ${item.quantity})`)
+      .join(', ');
+    
+    const message = `Invoice: ${invoiceNumber}\nItems: ${itemsList}\nTotal: ₹${totalAmount.toFixed(2)}`;
+    
     console.log({
       type: 'sale',
       invoice_number: invoiceNumber,
@@ -143,7 +151,12 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
       notes,
       items
     });
+    
     onClose();
+    
+    setTimeout(() => {
+      addNotification('Sale Created Successfully!', message);
+    }, 400);
   };
 
   if (!isOpen) return null;
@@ -170,18 +183,9 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6" onClick={() => setActiveSearch(null)}>
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <label className="block text-base font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                Sale Items
-              </label>
-              <button
-                type="button"
-                onClick={addItem}
-                className="flex items-center gap-1 text-sm text-[#348ADC] hover:text-[#2a6fb0] font-medium px-3 py-1.5 border border-[#348ADC] rounded-lg hover:bg-blue-50 transition"
-              >
-                <Plus size={16} /> Add More
-              </button>
-            </div>
+            <label className="block text-base font-semibold text-[#072741] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              Sale Items
+            </label>
 
             <div className="space-y-4">
               {items.map((item, index) => (
@@ -288,6 +292,14 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
                 </div>
               ))}
             </div>
+
+            <button
+              type="button"
+              onClick={addItem}
+              className="w-full mt-3 flex items-center justify-center gap-1 text-sm text-[#348ADC] hover:text-[#2a6fb0] font-medium px-3 py-2.5 border-2 border-dashed border-[#348ADC] rounded-lg hover:bg-blue-50 transition"
+            >
+              <Plus size={16} /> Add More Items
+            </button>
           </div>
 
           <div>
