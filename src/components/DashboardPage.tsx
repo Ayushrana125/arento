@@ -37,13 +37,16 @@ export function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* INVENTORY SECTION */}
-      <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-            Inventory Overview
-          </h2>
+          <div>
+            <h2 className="text-2xl font-bold text-[#072741] mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              Inventory Overview
+            </h2>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>Real-time stock monitoring</p>
+          </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 text-xs text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>
               <div className="flex items-center gap-1">
@@ -61,7 +64,7 @@ export function DashboardPage() {
             </div>
             <button
               onClick={() => setShowAmounts(!showAmounts)}
-              className="p-2 text-gray-400 hover:text-gray-600 transition"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
               title={showAmounts ? 'Hide amounts' : 'Show amounts'}
             >
               {showAmounts ? (
@@ -80,29 +83,51 @@ export function DashboardPage() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition">
-            <div className="text-2xl font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-              248
+          <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl border-2 border-blue-100 shadow-sm p-5 hover:shadow-lg hover:scale-105 transition-all duration-200">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-3xl font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                248
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#348ADC" strokeWidth="2">
+                  <path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>
+                </svg>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div className="text-sm text-gray-600 font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
               Total Active SKUs
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition">
-            <div className="text-2xl font-semibold text-red-600" style={{ fontFamily: 'Poppins, sans-serif' }}>
-              12
+          <div className="bg-gradient-to-br from-red-50 to-white rounded-xl border-2 border-red-100 shadow-sm p-5 hover:shadow-lg hover:scale-105 transition-all duration-200">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-3xl font-bold text-red-600" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                12
+              </div>
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div className="text-sm text-gray-600 font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
               Low Stock Items
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition">
-            <div className="text-2xl font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-              {showAmounts ? '₹ 4,20,000' : '•••••'}
+          <div className="bg-gradient-to-br from-green-50 to-white rounded-xl border-2 border-green-100 shadow-sm p-5 hover:shadow-lg hover:scale-105 transition-all duration-200">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-3xl font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                {showAmounts ? '₹ 4,20,000' : '•••••'}
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
+                  <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div className="text-sm text-gray-600 font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
               Total Stock Value
             </div>
           </div>
@@ -153,10 +178,21 @@ export function DashboardPage() {
       </div>
 
       {/* REVENUE SECTION */}
-      <div className="bg-green-50 rounded-2xl p-6 border border-green-200">
-        <h2 className="text-xl font-semibold text-[#072741] mb-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
-          Revenue Overview
-        </h2>
+      <div className="bg-gradient-to-br from-green-50 via-white to-green-50 rounded-2xl p-6 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#348ADC" strokeWidth="2">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+              <polyline points="17 6 23 6 23 12"/>
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              Revenue Overview
+            </h2>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>Sales performance metrics</p>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition">
@@ -281,10 +317,20 @@ export function DashboardPage() {
       </div>
 
       {/* COST SECTION */}
-      <div className="bg-orange-50 rounded-2xl p-6 border border-orange-200">
-        <h2 className="text-xl font-semibold text-[#072741] mb-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
-          Cost Overview
-        </h2>
+      <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 rounded-2xl p-6 border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#348ADC" strokeWidth="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              Cost Overview
+            </h2>
+            <p className="text-sm text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>Purchase tracking</p>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition">

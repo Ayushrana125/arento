@@ -1,6 +1,7 @@
 import { X, Plus, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { BillPreview } from './BillPreview';
 
 interface SalePanelProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
   const [searchResults, setSearchResults] = useState<{ [key: string]: typeof mockInventory }>({});
   const [activeSearch, setActiveSearch] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [autoDownloadPdf, setAutoDownloadPdf] = useState(false);
+  const [autoPrintBill, setAutoPrintBill] = useState(false);
   const firstSkuInputRef = useRef<HTMLInputElement>(null);
   const { addNotification } = useNotification();
 
@@ -151,6 +154,13 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
       notes,
       items
     });
+
+    if (autoDownloadPdf || autoPrintBill) {
+      const event = new CustomEvent('triggerBillAction', {
+        detail: { autoDownloadPdf, autoPrintBill }
+      });
+      window.dispatchEvent(event);
+    }
     
     onClose();
     
@@ -164,7 +174,13 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}></div>
-      <div className={`fixed top-0 right-0 h-full w-full md:w-[700px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out overflow-y-auto ${
+      <BillPreview 
+        invoiceNumber={invoiceNumber}
+        items={items}
+        totalAmount={totalAmount}
+        isVisible={isVisible}
+      />
+      <div className={`fixed top-0 right-0 h-full w-1/2 bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-out overflow-y-auto ${
         isVisible ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
@@ -316,13 +332,34 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
           </div>
 
           <div className="border-t-2 border-gray-200 pt-6 sticky bottom-0 bg-white">
-            <div className="flex justify-between items-center mb-6 bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-xl border-2 border-green-300">
+            <div className="flex justify-between items-center mb-4 bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-xl border-2 border-green-300">
               <span className="text-lg font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 Total Amount
               </span>
               <span className="text-3xl font-bold text-green-600" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 ₹ {totalAmount.toFixed(2)}
               </span>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoDownloadPdf}
+                  onChange={(e) => setAutoDownloadPdf(e.target.checked)}
+                  className="w-3.5 h-3.5 text-[#348ADC] border-gray-300 rounded focus:ring-[#348ADC]"
+                />
+                <span style={{ fontFamily: 'Inter, sans-serif' }}>Auto Download PDF</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoPrintBill}
+                  onChange={(e) => setAutoPrintBill(e.target.checked)}
+                  className="w-3.5 h-3.5 text-[#348ADC] border-gray-300 rounded focus:ring-[#348ADC]"
+                />
+                <span style={{ fontFamily: 'Inter, sans-serif' }}>Auto Print Bill</span>
+              </label>
             </div>
 
             <div className="flex gap-3">
