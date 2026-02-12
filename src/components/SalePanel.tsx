@@ -180,7 +180,7 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
         totalAmount={totalAmount}
         isVisible={isVisible}
       />
-      <div className={`fixed top-0 right-0 h-full w-1/2 bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-out overflow-y-auto ${
+      <div className={`fixed top-0 right-0 h-full w-full md:w-1/2 bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-out overflow-y-auto ${
         isVisible ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
