@@ -203,8 +203,8 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
   };
 
   return (
-    <div className={`fixed md:top-0 md:left-0 bottom-0 left-0 right-0 md:h-full md:w-1/2 bg-[#f5f3ed] z-[55] transform transition-transform duration-300 ease-out overflow-y-auto print:static print:w-full ${
-      isVisible ? 'md:translate-x-0 translate-y-0' : 'md:-translate-x-full translate-y-full'
+    <div className={`md:fixed md:top-0 md:left-0 md:h-full md:w-1/2 bg-[#f5f3ed] md:z-[55] md:transform md:transition-transform md:duration-300 md:ease-out overflow-y-auto print:static print:w-full ${
+      isVisible ? 'md:translate-x-0' : 'md:-translate-x-full'
     }`}>
       <div className="p-8">
         {/* Action Buttons */}
