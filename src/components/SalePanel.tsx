@@ -174,6 +174,12 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}></div>
+      <BillPreview 
+        invoiceNumber={invoiceNumber}
+        items={items}
+        totalAmount={totalAmount}
+        isVisible={isVisible}
+      />
       <div className={`fixed top-0 right-0 h-full w-full md:w-1/2 bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-out overflow-y-auto ${
         isVisible ? 'translate-x-0' : 'translate-x-full'
       }`}>
@@ -373,26 +379,6 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
             </div>
           </div>
         </form>
-
-        {/* Bill Preview on Mobile - Below Form */}
-        <div className="md:hidden">
-          <BillPreview 
-            invoiceNumber={invoiceNumber}
-            items={items}
-            totalAmount={totalAmount}
-            isVisible={isVisible}
-          />
-        </div>
-      </div>
-
-      {/* Bill Preview on Desktop - Left Side */}
-      <div className="hidden md:block">
-        <BillPreview 
-          invoiceNumber={invoiceNumber}
-          items={items}
-          totalAmount={totalAmount}
-          isVisible={isVisible}
-        />
       </div>
     </>
   );

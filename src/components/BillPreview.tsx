@@ -32,24 +32,12 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
     return mockInventory.find(item => item.sku === sku)?.name || sku;
   };
 
-  useEffect(() => {
-    const handleBillAction = (e: CustomEvent) => {
-      const { autoDownloadPdf, autoPrintBill } = e.detail;
-      if (autoDownloadPdf) {
-        handleDownloadPDF();
-      }
-      if (autoPrintBill) {
-        handlePrint();
-      }
-    };
-
-    window.addEventListener('triggerBillAction', handleBillAction as EventListener);
-    return () => window.removeEventListener('triggerBillAction', handleBillAction as EventListener);
-  }, [invoiceNumber, items, totalAmount]);
-
   const handleDownloadPDF = async () => {
     const printContent = document.getElementById('bill-content');
-    if (!printContent) return;
+    if (!printContent) {
+      console.error('Bill content not found');
+      return;
+    }
     
     const canvas = await html2canvas(printContent, {
       scale: 2,
@@ -68,7 +56,10 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
 
   const handlePrint = () => {
     const printContent = document.getElementById('bill-content');
-    if (!printContent) return;
+    if (!printContent) {
+      console.error('Bill content not found');
+      return;
+    }
     
     const printWindow = window.open('', '', 'width=800,height=600');
     if (!printWindow) return;
@@ -202,9 +193,24 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
     printWindow.print();
   };
 
+  useEffect(() => {
+    const handleBillAction = (e: CustomEvent) => {
+      const { autoDownloadPdf, autoPrintBill } = e.detail;
+      if (autoDownloadPdf) {
+        handleDownloadPDF();
+      }
+      if (autoPrintBill) {
+        handlePrint();
+      }
+    };
+
+    window.addEventListener('triggerBillAction', handleBillAction as EventListener);
+    return () => window.removeEventListener('triggerBillAction', handleBillAction as EventListener);
+  });
+
   return (
-    <div className={`md:fixed md:top-0 md:left-0 md:h-full md:w-1/2 bg-[#f5f3ed] md:z-[55] md:transform md:transition-transform md:duration-300 md:ease-out overflow-y-auto print:static print:w-full ${
-      isVisible ? 'md:translate-x-0' : 'md:-translate-x-full'
+    <div className={`fixed top-0 left-0 md:left-0 h-full w-full md:w-1/2 bg-[#f5f3ed] z-[55] transform transition-transform duration-300 ease-out overflow-y-auto print:static print:w-full ${
+      isVisible ? 'translate-x-0' : '-translate-x-full'
     }`}>
       <div className="p-8">
         {/* Action Buttons */}
