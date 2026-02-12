@@ -3,11 +3,13 @@ import { Sidebar } from './Sidebar';
 import { TopNavbar } from './TopNavbar';
 import { FloatingActionButton } from './FloatingActionButton';
 import { MobileDashboard } from './MobileDashboard';
+import { AddItemPanel } from './AddItemPanel';
 import { useState, useEffect } from 'react';
 
 export function AppLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isAddItemPanelOpen, setIsAddItemPanelOpen] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -16,6 +18,20 @@ export function AppLayout() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        return;
+      }
+      if (e.key === 'n' || e.key === 'N') {
+        setIsAddItemPanelOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   if (isMobile) {
@@ -32,6 +48,7 @@ export function AppLayout() {
         </main>
       </div>
       <FloatingActionButton />
+      <AddItemPanel isOpen={isAddItemPanelOpen} onClose={() => setIsAddItemPanelOpen(false)} />
     </div>
   );
 }

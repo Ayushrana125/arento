@@ -43,6 +43,7 @@ export function InventoryAnalysis() {
     { name: 'Oil Drain Plug', sku: 'ODP-88', quantity: 95, unit: 'pcs', minimum: 30, normal: 100, category: 'Engine' },
     { name: 'Fuse Assortment', sku: 'FA-MIX', quantity: 180, unit: 'pcs', minimum: 50, normal: 200, category: 'Electrical' },
     { name: 'Zip Ties Pack', sku: 'ZT-100', quantity: 420, unit: 'pcs', minimum: 100, normal: 500, category: 'Accessories' },
+    { name: 'Clutch Cable', sku: 'CC-789', quantity: 0, unit: 'pcs', minimum: 5, normal: 20, category: 'Engine' },
   ];
 
   const getStatus = (item: InventoryItem): Status => {
@@ -55,15 +56,16 @@ export function InventoryAnalysis() {
     return Math.min((item.quantity / item.normal) * 100, 100);
   };
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage <= 20) return 'from-red-600 to-red-700';
-    if (percentage <= 30) return 'from-red-500 to-red-600';
-    if (percentage <= 40) return 'from-orange-500 to-red-500';
-    if (percentage <= 50) return 'from-yellow-500 to-orange-500';
-    if (percentage <= 60) return 'from-yellow-400 to-yellow-500';
-    if (percentage <= 70) return 'from-lime-400 to-yellow-400';
-    if (percentage <= 80) return 'from-green-400 to-lime-400';
-    return 'from-green-500 to-green-600';
+  const getCardBackground = (percentage: number) => {
+    if (percentage === 0) return 'bg-red-200';
+    if (percentage <= 20) return 'bg-red-100';
+    if (percentage <= 30) return 'bg-red-50';
+    if (percentage <= 40) return 'bg-orange-100';
+    if (percentage <= 50) return 'bg-yellow-100';
+    if (percentage <= 60) return 'bg-yellow-50';
+    if (percentage <= 70) return 'bg-lime-100';
+    if (percentage <= 80) return 'bg-lime-50';
+    return 'bg-green-100';
   };
 
   const filteredData = inventoryData
@@ -120,26 +122,47 @@ export function InventoryAnalysis() {
 
         {/* Summary Counters - Inline */}
         <div className="flex items-center gap-2">
-          <div className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 flex items-center gap-2">
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'Healthy' ? 'all' : 'Healthy')}
+            className={`rounded-lg border px-3 py-1.5 flex items-center gap-2 transition-all ${
+              statusFilter === 'Healthy' 
+                ? 'bg-green-100 border-green-300 shadow-sm' 
+                : 'bg-white border-gray-200 hover:border-green-300'
+            }`}
+          >
             <span className="text-sm font-semibold text-green-600" style={{ fontFamily: 'Poppins, sans-serif' }}>
               {statusCounts.healthy}
             </span>
             <span className="text-xs text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>Healthy</span>
-          </div>
+          </button>
 
-          <div className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 flex items-center gap-2">
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'Low' ? 'all' : 'Low')}
+            className={`rounded-lg border px-3 py-1.5 flex items-center gap-2 transition-all ${
+              statusFilter === 'Low' 
+                ? 'bg-yellow-100 border-yellow-300 shadow-sm' 
+                : 'bg-white border-gray-200 hover:border-yellow-300'
+            }`}
+          >
             <span className="text-sm font-semibold text-yellow-600" style={{ fontFamily: 'Poppins, sans-serif' }}>
               {statusCounts.low}
             </span>
             <span className="text-xs text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>Low</span>
-          </div>
+          </button>
 
-          <div className="bg-white rounded-lg border border-gray-200 px-3 py-1.5 flex items-center gap-2">
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'Critical' ? 'all' : 'Critical')}
+            className={`rounded-lg border px-3 py-1.5 flex items-center gap-2 transition-all ${
+              statusFilter === 'Critical' 
+                ? 'bg-red-100 border-red-300 shadow-sm' 
+                : 'bg-white border-gray-200 hover:border-red-300'
+            }`}
+          >
             <span className="text-sm font-semibold text-red-600" style={{ fontFamily: 'Poppins, sans-serif' }}>
               {statusCounts.critical}
             </span>
             <span className="text-xs text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>Critical</span>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -205,7 +228,9 @@ export function InventoryAnalysis() {
             return (
               <div
                 key={idx}
-                className={`relative bg-white rounded-2xl border-2 p-6 hover:shadow-xl transition-all duration-200 cursor-pointer group ${
+                className={`relative rounded-2xl border-2 p-6 hover:shadow-xl transition-all duration-200 cursor-pointer group ${
+                  getCardBackground(progress)
+                } ${
                   status === 'Critical' ? 'border-red-400 shadow-red-100' : 
                   status === 'Low' ? 'border-yellow-400 shadow-yellow-100' : 
                   'border-gray-200 hover:border-[#348ADC]'
@@ -243,10 +268,17 @@ export function InventoryAnalysis() {
                   </div>
                   
                   {/* Progress Bar */}
-                  <div className="relative w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                  <div className="relative w-full bg-white/50 rounded-full h-3 overflow-hidden">
                     <div
-                      className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 bg-gradient-to-r ${
-                        getProgressColor(progress)
+                      className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${
+                        progress <= 20 ? 'bg-red-500' :
+                        progress <= 30 ? 'bg-red-400' :
+                        progress <= 40 ? 'bg-orange-400' :
+                        progress <= 50 ? 'bg-yellow-400' :
+                        progress <= 60 ? 'bg-yellow-300' :
+                        progress <= 70 ? 'bg-lime-400' :
+                        progress <= 80 ? 'bg-green-400' :
+                        'bg-green-500'
                       }`}
                       style={{ width: `${progress}%` }}
                     >

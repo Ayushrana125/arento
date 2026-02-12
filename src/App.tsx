@@ -8,6 +8,7 @@ import { Sales } from './components/Sales';
 import { Purchases } from './components/Purchases';
 import { Inventory } from './components/Inventory';
 import { InventoryAnalysis } from './components/InventoryAnalysis';
+import { InventoryManagement } from './components/InventoryManagement';
 import { Settings } from './components/Settings';
 
 function App() {
@@ -34,7 +35,7 @@ function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="sales" element={<Sales />} />
         <Route path="purchases" element={<Purchases />} />
-        <Route path="inventory" element={<Inventory />} />
+        <Route path="inventory" element={<InventoryManagement />} />
         <Route path="inventory-analysis" element={<InventoryAnalysis />} />
         <Route path="settings" element={<Settings />} />
       </Route>

@@ -28,6 +28,9 @@ const mockInventory = [
 export function SalePanel({ isOpen, onClose }: SalePanelProps) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [notes, setNotes] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [vehicleNo, setVehicleNo] = useState('');
+  const [msName, setMsName] = useState('');
   const [items, setItems] = useState<SaleItem[]>([
     { id: '1', sku: '', quantity: 1, price: 0, subtotal: 0 },
   ]);
@@ -179,6 +182,9 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
         items={items}
         totalAmount={totalAmount}
         isVisible={isVisible}
+        mobile={mobile}
+        vehicleNo={vehicleNo}
+        msName={msName}
       />
       <div className={`fixed top-0 right-0 h-full w-full md:w-1/2 bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-out overflow-y-auto ${
         isVisible ? 'translate-x-0' : 'translate-x-full'
@@ -198,6 +204,45 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6" onClick={() => setActiveSearch(null)}>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Mobile
+              </label>
+              <input
+                type="tel"
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#348ADC] focus:border-transparent text-sm"
+                placeholder="Customer mobile"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Vehicle No.
+              </label>
+              <input
+                type="text"
+                value={vehicleNo}
+                onChange={(e) => setVehicleNo(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#348ADC] focus:border-transparent text-sm"
+                placeholder="MH-01-AB-1234"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                M/S
+              </label>
+              <input
+                type="text"
+                value={msName}
+                onChange={(e) => setMsName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#348ADC] focus:border-transparent text-sm"
+                placeholder="Company name"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-base font-semibold text-[#072741] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
               Sale Items

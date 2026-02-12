@@ -13,6 +13,9 @@ interface BillPreviewProps {
   }>;
   totalAmount: number;
   isVisible: boolean;
+  mobile?: string;
+  vehicleNo?: string;
+  msName?: string;
 }
 
 const mockInventory = [
@@ -24,7 +27,7 @@ const mockInventory = [
   { sku: 'EOF-445', name: 'Engine Oil Filter', price: 350 },
 ];
 
-export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: BillPreviewProps) {
+export function BillPreview({ invoiceNumber, items, totalAmount, isVisible, mobile, vehicleNo, msName }: BillPreviewProps) {
   const user = JSON.parse(localStorage.getItem('arento_user') || '{}');
   const companyName = user.company || 'Shree Ram Auto Parts';
 
@@ -96,6 +99,12 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
               color: #072741;
               font-family: 'Poppins', sans-serif;
             }
+            .company-info {
+              font-size: 12px;
+              color: #6b7280;
+              margin-top: 8px;
+              line-height: 1.5;
+            }
             .invoice-info { text-align: right; }
             .invoice-label { font-size: 14px; color: #6b7280; margin-bottom: 4px; }
             .invoice-number {
@@ -105,6 +114,16 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
               font-family: 'Poppins', sans-serif;
             }
             .invoice-date { font-size: 14px; color: #6b7280; margin-top: 8px; }
+            .customer-info {
+              font-size: 13px;
+              color: #374151;
+              margin-top: 12px;
+              line-height: 1.6;
+            }
+            .customer-info-label {
+              font-weight: 600;
+              color: #072741;
+            }
             .items-section { margin-bottom: 40px; }
             .items-title {
               font-size: 18px;
@@ -178,6 +197,13 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
             }
             .branding img { height: 16px; }
             .branding-text { font-weight: 600; }
+            .blessing {
+              text-align: center;
+              font-size: 16px;
+              font-weight: 600;
+              color: #072741;
+              margin-bottom: 20px;
+            }
             @media print {
               body { padding: 0; }
               .bill-container { padding: 20px; }
@@ -232,6 +258,11 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
         </div>
 
         <div className="bg-[#fffef8] rounded-lg shadow-lg p-8 max-w-3xl mx-auto bill-container" id="bill-content">
+          {/* Blessing */}
+          <div className="text-center text-base font-semibold text-[#072741] mb-6 blessing" style={{ fontFamily: 'Poppins, sans-serif' }}>
+            || श्री गणेशाय नमः ||
+          </div>
+
           {/* Header */}
           <div className="flex items-start justify-between mb-8 pb-6 border-b-2 border-gray-200 header">
             <div>
@@ -239,6 +270,11 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
               <h1 className="text-2xl font-bold text-[#072741] company-name" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {companyName}
               </h1>
+              <div className="text-xs text-gray-600 mt-2 max-w-sm company-info" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <div>Mobile: 9324641323</div>
+                <div className="mt-1">Shop No. 3, Vishnu Niwas, Haridas Nagar, R.M. Bhattad Road,</div>
+                <div>Opp. Pulse Hospital, Borivali (W), Mumbai - 400092</div>
+              </div>
             </div>
             <div className="text-right invoice-info">
               <div className="text-sm text-gray-600 mb-1 invoice-label">Invoice Number</div>
@@ -252,6 +288,13 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible }: Bi
                   year: 'numeric' 
                 })}
               </div>
+              {(mobile || vehicleNo || msName) && (
+                <div className="text-left mt-4 customer-info" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  {mobile && <div><span className="customer-info-label">Mobile:</span> {mobile}</div>}
+                  {vehicleNo && <div><span className="customer-info-label">Vehicle No:</span> {vehicleNo}</div>}
+                  {msName && <div><span className="customer-info-label">M/S:</span> {msName}</div>}
+                </div>
+              )}
             </div>
           </div>
 
