@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { SalesTransactions } from './SalesTransactions';
+import { BillViewer } from './BillViewer';
 
 export function Sales() {
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [timeFilter, setTimeFilter] = useState('today');
   const [modeToggle, setModeToggle] = useState('quantity');
   const [performanceFilter, setPerformanceFilter] = useState('15');
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+
+  if (showAllTransactions) {
+    return <SalesTransactions onClose={() => setShowAllTransactions(false)} />;
+  }
 
   // Mock data
   const todayRevenue = 45280;
@@ -14,11 +20,11 @@ export function Sales() {
   const avgBillValue = 1969;
 
   const recentTransactions = [
-    { invoice: 'INV-001234', items: 5, amount: 2450, date: '2024-01-20 14:30', payment: 'Cash' },
-    { invoice: 'INV-001233', items: 3, amount: 1890, date: '2024-01-20 13:15', payment: 'UPI' },
-    { invoice: 'INV-001232', items: 7, amount: 3200, date: '2024-01-20 12:45', payment: 'Card' },
-    { invoice: 'INV-001231', items: 2, amount: 980, date: '2024-01-20 11:20', payment: 'Cash' },
-    { invoice: 'INV-001230', items: 4, amount: 2150, date: '2024-01-20 10:30', payment: 'UPI' },
+    { invoice: 'INV-001234', items: 5, amount: 2450, date: '2024-01-20 14:30', payment: 'Cash', itemsList: [{ name: 'Engine Oil 5W-30', sku: 'EO-530', quantity: 2, price: 500, subtotal: 1000 }, { name: 'Brake Pad Set', sku: 'BP-2024', quantity: 1, price: 600, subtotal: 600 }] },
+    { invoice: 'INV-001233', items: 3, amount: 1890, date: '2024-01-20 13:15', payment: 'UPI', itemsList: [{ name: 'Air Filter', sku: 'AF-332', quantity: 2, price: 400, subtotal: 800 }, { name: 'Spark Plug', sku: 'SP-890', quantity: 3, price: 150, subtotal: 450 }] },
+    { invoice: 'INV-001232', items: 7, amount: 3200, date: '2024-01-20 12:45', payment: 'Card', itemsList: [{ name: 'Battery 12V', sku: 'BAT-12V', quantity: 1, price: 4500, subtotal: 4500 }] },
+    { invoice: 'INV-001231', items: 2, amount: 980, date: '2024-01-20 11:20', payment: 'Cash', itemsList: [{ name: 'Wiper Blade', sku: 'WB-101', quantity: 2, price: 200, subtotal: 400 }] },
+    { invoice: 'INV-001230', items: 4, amount: 2150, date: '2024-01-20 10:30', payment: 'UPI', itemsList: [{ name: 'Engine Oil 5W-30', sku: 'EO-530', quantity: 3, price: 500, subtotal: 1500 }] },
   ];
 
   // Data for different time periods
@@ -139,7 +145,14 @@ export function Sales() {
 
   return (
     <>
-      {showAllTransactions && <SalesTransactions onClose={() => setShowAllTransactions(false)} />}
+      <BillViewer
+        isOpen={!!selectedInvoice}
+        onClose={() => setSelectedInvoice(null)}
+        invoiceNumber={selectedInvoice?.invoice || ''}
+        items={selectedInvoice?.itemsList || []}
+        totalAmount={selectedInvoice?.amount || 0}
+        date={selectedInvoice?.date || ''}
+      />
       <div className="space-y-6">
       {/* Sales Summary Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -208,11 +221,13 @@ export function Sales() {
               </thead>
               <tbody>
                 {recentTransactions.map((txn, idx) => (
-                  <tr key={idx} className="border-b border-gray-100 last:border-0">
+                  <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-blue-50/50 cursor-pointer transition" onClick={() => setSelectedInvoice(txn)}>
                     <td className="py-3 text-xs font-mono text-[#348ADC]">{txn.invoice}</td>
                     <td className="py-3 text-xs text-center text-gray-700">{txn.items}</td>
                     <td className="py-3 text-xs text-right font-semibold text-[#072741]">₹{txn.amount.toLocaleString()}</td>
-                    <td className="py-3 text-xs text-center text-gray-600">{txn.date}</td>
+                    <td className="py-3 text-xs text-center text-gray-600">
+                      {new Date(txn.date).toLocaleDateString('en-GB')} {new Date(txn.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    </td>
                     <td className="py-3 text-xs text-center text-gray-600">{txn.payment}</td>
                   </tr>
                 ))}
@@ -439,7 +454,7 @@ export function Sales() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
     </>
   );
 }

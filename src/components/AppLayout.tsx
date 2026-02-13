@@ -39,11 +39,11 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F5F7FA]">
+    <div className="flex min-h-screen bg-[#F5F7FA] dark:bg-[#1a1a1a]">
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopNavbar />
-        <main className="px-6 py-3 overflow-auto" style={{ marginTop: '130px' }}>
+        <main className="px-6 py-3 overflow-auto dark:bg-[#1a1a1a]" style={{ marginTop: '130px' }}>
           <Outlet />
         </main>
       </div>

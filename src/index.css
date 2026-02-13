@@ -19,6 +19,114 @@ html, body {
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --text-primary: #072741;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+  }
+  
+  .dark {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --border-color: #404040;
+  }
+  
+  body {
+    @apply bg-[var(--bg-secondary)] text-[var(--text-primary)] transition-colors duration-200;
+  }
+
+  .dark .bg-white {
+    background-color: #2d2d2d !important;
+  }
+
+  .dark .border-gray-200 {
+    border-color: #4b5563 !important;
+  }
+
+  .dark .border-gray-100 {
+    border-color: #374151 !important;
+  }
+
+  .dark .text-\\[\\#072741\\] {
+    color: #ffffff !important;
+  }
+
+  .dark .text-gray-700 {
+    color: #ffffff !important;
+  }
+
+  .dark .text-gray-600 {
+    color: #e5e7eb !important;
+  }
+
+  .dark .text-gray-500 {
+    color: #e5e7eb !important;
+  }
+
+  .dark .bg-gray-50 {
+    background-color: #3d3d3d !important;
+  }
+
+  .dark .bg-gray-100 {
+    background-color: #4b5563 !important;
+  }
+
+  .dark input,
+  .dark select,
+  .dark textarea {
+    background-color: #3d3d3d !important;
+    border-color: #4b5563 !important;
+    color: #ffffff !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #9ca3af !important;
+  }
+
+  .dark option {
+    background-color: #3d3d3d !important;
+    color: #ffffff !important;
+  }
+
+  .dark .from-blue-100 .text-\\[\\#072741\\],
+  .dark .from-emerald-100 .text-\\[\\#072741\\],
+  .dark .from-teal-100 .text-\\[\\#072741\\],
+  .dark .from-indigo-100 .text-\\[\\#072741\\],
+  .dark .from-amber-100 .text-\\[\\#072741\\],
+  .dark .from-violet-100 .text-\\[\\#072741\\],
+  .dark .from-purple-100 .text-\\[\\#072741\\],
+  .dark .from-red-100 .text-\\[\\#072741\\],
+  .dark .from-cyan-100 .text-\\[\\#072741\\],
+  .dark .from-pink-100 .text-\\[\\#072741\\],
+  .dark .from-orange-100 .text-\\[\\#072741\\] {
+    color: #111827 !important;
+  }
+
+  .dark .from-blue-100 .text-gray-700,
+  .dark .from-emerald-100 .text-gray-700,
+  .dark .from-teal-100 .text-gray-700,
+  .dark .from-indigo-100 .text-gray-700,
+  .dark .from-amber-100 .text-gray-700,
+  .dark .from-violet-100 .text-gray-700,
+  .dark .from-purple-100 .text-gray-700,
+  .dark .from-red-100 .text-gray-700,
+  .dark .from-cyan-100 .text-gray-700,
+  .dark .from-pink-100 .text-gray-700,
+  .dark .from-orange-100 .text-gray-700 {
+    color: #374151 !important;
+  }
+
+  .dark .bg-\\[\\#072741\\] {
+    background-color: #1e3a52 !important;
+  }
+}
+
 * {
   scroll-behavior: smooth;
 }

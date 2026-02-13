@@ -1,4 +1,5 @@
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Hero } from './components/Hero';
 import { Navbar } from './components/Navbar';
 import { Waitlist } from "./components/Waitlist";
@@ -13,6 +14,15 @@ import { Settings } from './components/Settings';
 
 function App() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const theme = localStorage.getItem('arento_theme') || 'light';
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   const handleLoginSuccess = () => {
     navigate('/app/dashboard');

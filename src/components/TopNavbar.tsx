@@ -77,7 +77,7 @@ export function TopNavbar() {
   const { title, subtext } = getPageInfo();
 
   return (
-    <div className="fixed top-0 right-0 z-50 bg-white border-b border-gray-300 transition-all duration-300" style={{ left: sidebarWidth, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+    <div className="fixed top-0 right-0 z-50 bg-white dark:bg-[#2d2d2d] border-b border-gray-300 dark:border-gray-700 transition-all duration-300" style={{ left: sidebarWidth, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
       {/* Identity Row */}
       <div className="px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -89,7 +89,7 @@ export function TopNavbar() {
           </div>
           <button
             onClick={() => alert('Add Team Members functionality coming soon!')}
-            className="flex items-center gap-2 px-4 py-1.5 bg-white border border-gray-200 hover:border-[#348ADC] hover:bg-gray-50 rounded-full transition-all duration-200 shadow-sm"
+            className="flex items-center gap-2 px-4 py-1.5 bg-white dark:bg-[#3d3d3d] border border-gray-200 dark:border-gray-600 hover:border-[#348ADC] hover:bg-gray-50 dark:hover:bg-[#4d4d4d] rounded-full transition-all duration-200 shadow-sm"
             style={{ fontFamily: 'Inter, sans-serif' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#348ADC" strokeWidth="2">
@@ -102,8 +102,8 @@ export function TopNavbar() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full">
-          <span className="text-[#072741] font-medium text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
+        <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#3d3d3d] px-3 py-1.5 rounded-full">
+          <span className="text-[#072741] dark:text-gray-200 font-medium text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
             {getDisplayName()}
           </span>
           <div className="w-8 h-8 rounded-full bg-[#348ADC] flex items-center justify-center text-white font-medium text-xs">
@@ -113,14 +113,14 @@ export function TopNavbar() {
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-gray-200 w-full"></div>
+      <div className="h-px bg-gray-200 dark:bg-gray-700 w-full"></div>
 
       {/* Page Header Row */}
       <div className="px-6 py-2">
-        <h1 className="text-lg font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+        <h1 className="text-lg font-semibold text-[#072741] dark:text-gray-200" style={{ fontFamily: 'Poppins, sans-serif' }}>
           {title}
         </h1>
-        <p className="text-xs text-[#072741] opacity-60" style={{ fontFamily: 'Inter, sans-serif' }}>
+        <p className="text-xs text-[#072741] dark:text-gray-400 opacity-60" style={{ fontFamily: 'Inter, sans-serif' }}>
           {subtext}
         </p>
       </div>

@@ -1,0 +1,33 @@
+// Dark Mode Update Script - Apply these classes across all components
+
+// DASHBOARD.TSX
+// Replace all instances:
+'bg-white rounded-xl' -> 'bg-white dark:bg-[#2d2d2d] rounded-xl'
+'border-gray-200' -> 'border-gray-200 dark:border-gray-700'
+'text-[#072741]' (in white cards) -> 'text-[#072741] dark:text-gray-200'
+'text-gray-700' -> 'text-gray-700 dark:text-gray-300'
+'text-gray-600' -> 'text-gray-600 dark:text-gray-400'
+'text-gray-500' -> 'text-gray-500 dark:text-gray-400'
+'bg-gray-50' -> 'bg-gray-50 dark:bg-[#3d3d3d]'
+'bg-gray-100' -> 'bg-gray-100 dark:bg-gray-700'
+'hover:bg-gray-50' -> 'hover:bg-gray-50 dark:hover:bg-[#4d4d4d]'
+'hover:bg-gray-100' -> 'hover:bg-gray-100 dark:hover:bg-[#4d4d4d]'
+
+// For gradient cards (blue, emerald, teal, etc), text should be darker in dark mode:
+'text-gray-700' (in gradient cards) -> 'text-gray-700 dark:text-gray-800'
+'text-[#072741]' (in gradient cards) -> 'text-[#072741] dark:text-gray-900'
+
+// SALES.TSX, PURCHASES.TSX, INVENTORYMANAGEMENT.TSX
+// Same pattern as Dashboard
+
+// INPUTS & SELECTS
+'bg-white' (inputs) -> 'bg-white dark:bg-[#3d3d3d]'
+'border-gray-300' -> 'border-gray-300 dark:border-gray-600'
+'text-sm' (in inputs) -> 'text-sm dark:text-gray-200'
+
+// TABLES
+'bg-white' (table container) -> 'bg-white dark:bg-[#2d2d2d]'
+'border-gray-200' -> 'border-gray-200 dark:border-gray-700'
+'hover:bg-gray-50' (table rows) -> 'hover:bg-gray-50 dark:hover:bg-[#3d3d3d]'
+'text-gray-600' (table text) -> 'text-gray-600 dark:text-gray-400'
+'text-[#072741]' (table text) -> 'text-[#072741] dark:text-gray-200'

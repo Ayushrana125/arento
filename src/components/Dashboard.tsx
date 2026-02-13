@@ -109,7 +109,7 @@ const mockData = {
 // Reusable Components
 
 const ChartCard = ({ title, children, size = 'normal' }: any) => (
-  <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${
+  <div className={`bg-white dark:bg-[#2d2d2d] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${
     size === 'small' ? 'p-4' : 'p-6'
   }`}>
     <h3 className={`font-semibold text-[#072741] mb-4 ${
