@@ -11,6 +11,24 @@ interface UserData {
 export function TopNavbar() {
   const location = useLocation();
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState('256px');
+
+  useEffect(() => {
+    const checkSidebar = () => {
+      const sidebar = document.querySelector('[data-sidebar]');
+      if (sidebar) {
+        const width = sidebar.classList.contains('w-16') ? '64px' : '256px';
+        setSidebarWidth(width);
+      }
+    };
+    checkSidebar();
+    const observer = new MutationObserver(checkSidebar);
+    const sidebar = document.querySelector('[data-sidebar]');
+    if (sidebar) {
+      observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+    }
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const loadUserData = () => {
@@ -49,7 +67,7 @@ export function TopNavbar() {
     const path = location.pathname;
     if (path.includes('dashboard')) return { title: 'Dashboard', subtext: 'Overview of your business metrics' };
     if (path.includes('inventory-analysis')) return { title: 'Inventory Analysis', subtext: 'Analyze stock levels and trends' };
-    if (path.includes('sales')) return { title: 'Sales', subtext: 'Manage billing and invoices' };
+    if (path.includes('sales')) return { title: 'Sales', subtext: 'Manage billing, Track revenue and product performance' };
     if (path.includes('purchases')) return { title: 'Purchases', subtext: 'Track purchase orders and expenses' };
     if (path.includes('inventory')) return { title: 'Inventory Management', subtext: 'Manage products and stock' };
     if (path.includes('settings')) return { title: 'Settings & Configurations', subtext: 'Configure your account' };
@@ -59,9 +77,9 @@ export function TopNavbar() {
   const { title, subtext } = getPageInfo();
 
   return (
-    <>
-      {/* Top Bar - Company & User Info */}
-      <div className="bg-white px-6 py-3 flex items-center justify-between border-b border-gray-200">
+    <div className="fixed top-0 right-0 z-50 bg-white border-b border-gray-300 transition-all duration-300" style={{ left: sidebarWidth, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+      {/* Identity Row */}
+      <div className="px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#348ADC] to-[#65C9D4] rounded-full shadow-md">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
@@ -94,17 +112,18 @@ export function TopNavbar() {
         </div>
       </div>
 
-      {/* Page Title Bar */}
-      <div className="bg-white px-6 py-2 flex items-center justify-between border-b border-gray-200">
-        <div>
-          <h1 className="text-lg font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-            {title}
-          </h1>
-          <p className="text-xs text-[#072741] opacity-60" style={{ fontFamily: 'Inter, sans-serif' }}>
-            {subtext}
-          </p>
-        </div>
+      {/* Divider */}
+      <div className="h-px bg-gray-200 w-full"></div>
+
+      {/* Page Header Row */}
+      <div className="px-6 py-2">
+        <h1 className="text-lg font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+          {title}
+        </h1>
+        <p className="text-xs text-[#072741] opacity-60" style={{ fontFamily: 'Inter, sans-serif' }}>
+          {subtext}
+        </p>
       </div>
-    </>
+    </div>
   );
 }

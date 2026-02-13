@@ -59,6 +59,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
   return (
     <aside 
+      data-sidebar
       className={`fixed left-0 top-0 h-screen bg-gradient-to-br from-[#072741] to-[#0a3d5c] border-r border-white/10 flex flex-col z-30 overflow-y-auto transition-all duration-300 ${
         isCollapsed ? 'w-16' : 'w-64'
       }`}

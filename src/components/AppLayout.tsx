@@ -43,7 +43,7 @@ export function AppLayout() {
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <TopNavbar />
-        <main className="flex-1 px-6 py-3 overflow-auto">
+        <main className="px-6 py-3 overflow-auto" style={{ marginTop: '130px' }}>
           <Outlet />
         </main>
       </div>

@@ -22,6 +22,8 @@ export function InventoryManagement() {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
@@ -134,7 +136,17 @@ export function InventoryManagement() {
     const matchesSearch = item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          item.sku_code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesStock = stockFilter === 'all' || 
+                        (stockFilter === 'low' && item.current_quantity <= item.min_stock) ||
+                        (stockFilter === 'normal' && item.current_quantity > item.min_stock);
+    return matchesSearch && matchesCategory && matchesStock;
+  }).sort((a, b) => {
+    if (sortBy === 'recent') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    if (sortBy === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    if (sortBy === 'updated') return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    if (sortBy === 'name') return a.item_name.localeCompare(b.item_name);
+    if (sortBy === 'quantity') return b.current_quantity - a.current_quantity;
+    return 0;
   });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -216,6 +228,30 @@ export function InventoryManagement() {
               </option>
             ))}
           </select>
+
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#348ADC] focus:border-transparent"
+            style={{ fontFamily: 'Inter, sans-serif' }}
+          >
+            <option value="all">All Stock</option>
+            <option value="low">Low Stock</option>
+            <option value="normal">Normal Stock</option>
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#348ADC] focus:border-transparent"
+            style={{ fontFamily: 'Inter, sans-serif' }}
+          >
+            <option value="recent">Recently Added</option>
+            <option value="oldest">Oldest First</option>
+            <option value="updated">Recently Updated</option>
+            <option value="name">Name (A-Z)</option>
+            <option value="quantity">Quantity (High-Low)</option>
+          </select>
         </div>
       </div>
 
@@ -264,7 +300,7 @@ export function InventoryManagement() {
       {/* Table View */}
       {viewMode === 'table' && (
         <div className="bg-white rounded-xl border border-gray-200">
-          <div className="overflow-auto max-h-[340px] rounded-xl">
+          <div className="overflow-auto rounded-xl" style={{ maxHeight: 'calc(100vh - 280px)' }}>
             <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
             <thead className="bg-[#072741] border-b border-gray-200 sticky top-0 z-10">
               <tr>
@@ -277,6 +313,8 @@ export function InventoryManagement() {
                 <th className="text-right text-xs font-semibold text-white px-4 py-2">Cost Price</th>
                 <th className="text-right text-xs font-semibold text-white px-4 py-2">Selling Price</th>
                 <th className="text-left text-xs font-semibold text-white px-4 py-2">Vendor</th>
+                <th className="text-center text-xs font-semibold text-white px-4 py-2">Created</th>
+                <th className="text-center text-xs font-semibold text-white px-4 py-2">Updated</th>
                 <th className="text-center text-xs font-semibold text-white px-4 py-2">Actions</th>
               </tr>
             </thead>
@@ -299,6 +337,8 @@ export function InventoryManagement() {
                   <td className="px-4 py-2 text-xs text-right text-gray-700">₹{item.cost_price}</td>
                   <td className="px-4 py-2 text-xs text-right font-semibold text-green-600">₹{item.selling_price}</td>
                   <td className="px-4 py-2 text-xs text-gray-600">{item.vendor_name}</td>
+                  <td className="px-4 py-2 text-xs text-center text-gray-600">{new Date(item.created_at).toLocaleDateString('en-GB')}</td>
+                  <td className="px-4 py-2 text-xs text-center text-gray-600">{new Date(item.updated_at).toLocaleDateString('en-GB')}</td>
                   <td className="px-4 py-2 text-center">
                     <button className="text-xs text-[#348ADC] hover:text-[#2a6fb0] font-medium">
                       Edit
