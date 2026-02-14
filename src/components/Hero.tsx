@@ -62,14 +62,14 @@ export function Hero() {
             >
               Arento handles the operational side of your business.
               We manage your inventory, billing, purchases, and sales 
-              so you can focus on growth while operations stay efficient & accurate.
+              so you can focus on growth while operations stay efficient and accurate.
             </p>
               
             <p
               className="text-lg text-gray-300 mb-8 leading-relaxed font-semibold"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              You run the business. We handle the numbers!.
+              You run the business. We handle the numbers.
             </p>
 
 
