@@ -2,6 +2,7 @@ import { X, Plus, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { BillPreview } from './BillPreview';
+import { getUserPermissions } from '../lib/permissions';
 
 interface SalePanelProps {
   isOpen: boolean;
@@ -39,8 +40,15 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [autoDownloadPdf, setAutoDownloadPdf] = useState(false);
   const [autoPrintBill, setAutoPrintBill] = useState(false);
+  const [canCreateSale, setCanCreateSale] = useState(false);
   const firstSkuInputRef = useRef<HTMLInputElement>(null);
   const { addNotification } = useNotification();
+
+  useEffect(() => {
+    getUserPermissions().then(permissions => {
+      setCanCreateSale(permissions.addSalesPurchase);
+    });
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -142,6 +150,11 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!canCreateSale) {
+      addNotification('Access Denied', 'You do not have permission to create sales.');
+      return;
+    }
     
     const itemsList = items
       .filter(item => item.sku && item.quantity > 0)
@@ -417,7 +430,13 @@ export function SalePanel({ isOpen, onClose }: SalePanelProps) {
               </button>
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 bg-[#348ADC] text-white rounded-lg hover:bg-[#2a6fb0] transition font-semibold text-lg shadow-lg"
+                disabled={!canCreateSale}
+                className={`flex-1 px-6 py-3 rounded-lg transition font-semibold text-lg shadow-lg ${
+                  canCreateSale
+                    ? 'bg-[#348ADC] text-white hover:bg-[#2a6fb0]'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                title={!canCreateSale ? 'You do not have permission to create sales' : ''}
               >
                 Create Sale
               </button>

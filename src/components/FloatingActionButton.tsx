@@ -9,6 +9,7 @@ export function FloatingActionButton() {
   const [isPurchasePanelOpen, setIsPurchasePanelOpen] = useState(false);
   const [isStockAdjustmentPanelOpen, setIsStockAdjustmentPanelOpen] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
+  const [isHoveringButton, setIsHoveringButton] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -57,17 +58,13 @@ export function FloatingActionButton() {
     <>
       {/* Dark Fade Background - Only on hover */}
       <div className={`fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/50 to-transparent pointer-events-none z-40 transition-opacity duration-300 ${
-        isExpanded ? 'opacity-100' : 'opacity-0'
+        isHoveringButton ? 'opacity-100' : 'opacity-0'
       }`}></div>
 
-      <div 
-        className="fixed bottom-8 right-8 z-50 flex items-end gap-3"
-        onMouseEnter={() => setIsExpanded(true)}
-        onMouseLeave={() => setIsExpanded(false)}
-      >
+      <div className="fixed bottom-8 right-8 z-50 flex items-end gap-3">
         {/* Action Buttons */}
         <div className={`flex items-center gap-2 transition-all duration-300 ${
-          isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
+          isHoveringButton ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
         }`}>
           <button
             onClick={() => {
@@ -108,12 +105,14 @@ export function FloatingActionButton() {
 
         {/* Main FAB */}
         <button
+          onMouseEnter={() => setIsHoveringButton(true)}
+          onMouseLeave={() => setIsHoveringButton(false)}
           className={`w-16 h-16 bg-[#348ADC] text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-200 flex items-center justify-center flex-shrink-0 ${
             isPulsing ? 'animate-scale' : ''
           }`}
         >
           <span className={`text-5xl font-light leading-none -mt-1 transition-all duration-300 inline-block ${
-            isExpanded ? 'rotate-45 scale-110' : 'rotate-0 scale-100'
+            isHoveringButton ? 'rotate-45 scale-110' : 'rotate-0 scale-100'
           }`}>
             +
           </span>
