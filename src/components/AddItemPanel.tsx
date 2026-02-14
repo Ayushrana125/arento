@@ -1,6 +1,7 @@
-import { X } from 'lucide-react';
+import { X, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import { supabase } from '../lib/supabase';
 
 interface AddItemPanelProps {
   isOpen: boolean;
@@ -18,6 +19,9 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
   const [sellingPrice, setSellingPrice] = useState('');
   const [vendorName, setVendorName] = useState('');
   const [isVisible, setIsVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
+  const [existingItemId, setExistingItemId] = useState<string | null>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
   const { addNotification } = useNotification();
 
@@ -52,26 +56,91 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log({
-      sku_code: skuCode,
-      item_name: itemName,
-      category,
-      current_quantity: parseFloat(currentQuantity),
-      min_stock: parseFloat(minStock),
-      normal_stock: parseFloat(normalStock),
-      cost_price: parseFloat(costPrice),
-      selling_price: parseFloat(sellingPrice),
-      vendor_name: vendorName,
-    });
-    
-    onClose();
-    
-    setTimeout(() => {
+    setIsSubmitting(true);
+
+    const userData = localStorage.getItem('arento_user');
+    if (!userData) {
+      addNotification('Error', 'Session expired. Please login again.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { client_id: clientId } = JSON.parse(userData);
+
+    try {
+      // Check if SKU already exists
+      const { data: existingItem } = await supabase
+        .from('inventory_items')
+        .select('inventory_item_id, name')
+        .eq('client_id', clientId)
+        .eq('sku', skuCode)
+        .single();
+
+      if (existingItem) {
+        setExistingItemId(existingItem.inventory_item_id);
+        setShowUpdateConfirm(true);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Insert new item
+      const { error } = await supabase.from('inventory_items').insert({
+        client_id: clientId,
+        sku: skuCode,
+        name: itemName,
+        category,
+        vendor_name: vendorName,
+        quantity: parseFloat(currentQuantity),
+        min_stock: parseFloat(minStock),
+        normal_stock: parseFloat(normalStock),
+        cost_price: parseFloat(costPrice),
+        selling_price: parseFloat(sellingPrice),
+      });
+
+      if (error) throw error;
+
       addNotification('Item Added Successfully!', `${itemName} (${skuCode}) has been added to inventory.`);
-    }, 400);
+      onClose();
+      window.dispatchEvent(new Event('inventoryUpdated'));
+    } catch (error: any) {
+      addNotification('Error Adding Item', 'Unable to add item. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateConfirm = async () => {
+    if (!existingItemId) return;
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .update({
+          name: itemName,
+          category,
+          vendor_name: vendorName,
+          quantity: parseFloat(currentQuantity),
+          min_stock: parseFloat(minStock),
+          normal_stock: parseFloat(normalStock),
+          cost_price: parseFloat(costPrice),
+          selling_price: parseFloat(sellingPrice),
+        })
+        .eq('inventory_item_id', existingItemId);
+
+      if (error) throw error;
+
+      addNotification('Item Updated Successfully!', `${itemName} (${skuCode}) has been updated.`);
+      onClose();
+      window.dispatchEvent(new Event('inventoryUpdated'));
+    } catch (error: any) {
+      addNotification('Error Updating Item', 'Unable to update item. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+      setShowUpdateConfirm(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -315,14 +384,57 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
               </button>
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 bg-[#348ADC] text-white rounded-lg hover:bg-[#2a6fb0] transition font-semibold shadow-lg"
+                disabled={isSubmitting}
+                className="flex-1 px-6 py-3 bg-[#348ADC] text-white rounded-lg hover:bg-[#2a6fb0] transition font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Item
+                {isSubmitting ? 'Adding...' : 'Add Item'}
               </button>
             </div>
           </div>
         </form>
       </div>
+
+      {/* Update Confirmation Modal */}
+      {showUpdateConfirm && (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="text-orange-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  Item Already Exists
+                </h3>
+                <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  SKU Code: {skuCode}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+              An inventory item with this SKU code already exists. Do you want to update it with the new information?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowUpdateConfirm(false);
+                  setExistingItemId(null);
+                }}
+                className="flex-1 px-4 py-2 border-2 border-gray-300 text-[#072741] rounded-lg hover:bg-gray-50 transition font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateConfirm}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 bg-[#348ADC] text-white rounded-lg hover:bg-[#2a6fb0] transition font-semibold disabled:opacity-50"
+              >
+                {isSubmitting ? 'Updating...' : 'Update Item'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

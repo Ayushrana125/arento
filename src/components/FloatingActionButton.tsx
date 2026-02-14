@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { SalePanel } from './SalePanel';
 import { PurchasePanel } from './PurchasePanel';
 import { StockAdjustmentPanel } from './StockAdjustmentPanel';
+import { BulkUploadPanel } from './BulkUploadPanel';
 
 export function FloatingActionButton() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSalePanelOpen, setIsSalePanelOpen] = useState(false);
   const [isPurchasePanelOpen, setIsPurchasePanelOpen] = useState(false);
   const [isStockAdjustmentPanelOpen, setIsStockAdjustmentPanelOpen] = useState(false);
+  const [isBulkUploadPanelOpen, setIsBulkUploadPanelOpen] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
   const [isHoveringButton, setIsHoveringButton] = useState(false);
 
@@ -25,6 +27,7 @@ export function FloatingActionButton() {
         setIsSalePanelOpen(false);
         setIsPurchasePanelOpen(false);
         setIsStockAdjustmentPanelOpen(false);
+        setIsBulkUploadPanelOpen(false);
         return;
       }
       const target = e.target as HTMLElement;
@@ -48,6 +51,14 @@ export function FloatingActionButton() {
         setIsStockAdjustmentPanelOpen(true);
         setIsSalePanelOpen(false);
         setIsPurchasePanelOpen(false);
+        setIsBulkUploadPanelOpen(false);
+      }
+      if (e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsBulkUploadPanelOpen(true);
+        setIsSalePanelOpen(false);
+        setIsPurchasePanelOpen(false);
+        setIsStockAdjustmentPanelOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -71,6 +82,7 @@ export function FloatingActionButton() {
               setIsSalePanelOpen(true);
               setIsPurchasePanelOpen(false);
               setIsStockAdjustmentPanelOpen(false);
+              setIsBulkUploadPanelOpen(false);
             }}
             className="bg-white text-[#072741] px-5 py-3 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition-all duration-200 text-sm font-semibold border-2 border-gray-200"
             style={{ fontFamily: 'Inter, sans-serif' }}
@@ -83,6 +95,7 @@ export function FloatingActionButton() {
               setIsPurchasePanelOpen(true);
               setIsSalePanelOpen(false);
               setIsStockAdjustmentPanelOpen(false);
+              setIsBulkUploadPanelOpen(false);
             }}
             className="bg-white text-[#072741] px-5 py-3 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition-all duration-200 text-sm font-semibold border-2 border-gray-200"
             style={{ fontFamily: 'Inter, sans-serif' }}
@@ -95,11 +108,25 @@ export function FloatingActionButton() {
               setIsStockAdjustmentPanelOpen(true);
               setIsSalePanelOpen(false);
               setIsPurchasePanelOpen(false);
+              setIsBulkUploadPanelOpen(false);
             }}
             className="bg-white text-[#072741] px-5 py-3 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition-all duration-200 text-sm font-semibold border-2 border-gray-200"
             style={{ fontFamily: 'Inter, sans-serif' }}
           >
             Stoc<span className="underline">k</span> Adjustment <span className="text-xs text-gray-500 ml-1">(K)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setIsBulkUploadPanelOpen(true);
+              setIsSalePanelOpen(false);
+              setIsPurchasePanelOpen(false);
+              setIsStockAdjustmentPanelOpen(false);
+            }}
+            className="bg-white text-[#072741] px-5 py-3 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition-all duration-200 text-sm font-semibold border-2 border-gray-200"
+            style={{ fontFamily: 'Inter, sans-serif' }}
+          >
+            <span className="underline">B</span>ulk Upload <span className="text-xs text-gray-500 ml-1">(B)</span>
           </button>
         </div>
 
@@ -122,6 +149,7 @@ export function FloatingActionButton() {
       <SalePanel isOpen={isSalePanelOpen} onClose={() => setIsSalePanelOpen(false)} />
       <PurchasePanel isOpen={isPurchasePanelOpen} onClose={() => setIsPurchasePanelOpen(false)} />
       <StockAdjustmentPanel isOpen={isStockAdjustmentPanelOpen} onClose={() => setIsStockAdjustmentPanelOpen(false)} />
+      <BulkUploadPanel isOpen={isBulkUploadPanelOpen} onClose={() => setIsBulkUploadPanelOpen(false)} />
     </>
   );
 }
