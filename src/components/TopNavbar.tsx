@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface UserData {
   first_name?: string;
@@ -12,6 +13,8 @@ export function TopNavbar() {
   const location = useLocation();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState('256px');
+  const [showTeamMembers, setShowTeamMembers] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
 
   useEffect(() => {
     const checkSidebar = () => {
@@ -37,6 +40,9 @@ export function TopNavbar() {
         try {
           const parsed = JSON.parse(storedUser);
           setUserData(parsed);
+          if (parsed.client_id) {
+            loadTeamMembers(parsed.client_id);
+          }
         } catch (error) {
           console.error('Error parsing user data:', error);
         }
@@ -47,6 +53,19 @@ export function TopNavbar() {
     window.addEventListener('storage', loadUserData);
     return () => window.removeEventListener('storage', loadUserData);
   }, []);
+
+  const loadTeamMembers = async (clientId: string) => {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('users')
+      .select('user_fullname, role')
+      .eq('client_id', clientId)
+      .order('user_fullname');
+    
+    if (data) {
+      setTeamMembers(data);
+    }
+  };
 
   const getUserInitials = () => {
     if (!userData) return 'US';
@@ -87,19 +106,55 @@ export function TopNavbar() {
               {userData?.company_name || 'Arento Inc'}
             </span>
           </div>
-          <button
-            onClick={() => alert('Add Team Members functionality coming soon!')}
-            className="flex items-center gap-2 px-4 py-1.5 bg-white dark:bg-[#3d3d3d] border border-gray-200 dark:border-gray-600 hover:border-[#348ADC] hover:bg-gray-50 dark:hover:bg-[#4d4d4d] rounded-full transition-all duration-200 shadow-sm"
-            style={{ fontFamily: 'Inter, sans-serif' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#348ADC" strokeWidth="2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <line x1="19" y1="8" x2="19" y2="14"></line>
-              <line x1="22" y1="11" x2="16" y2="11"></line>
-            </svg>
-            <span className="text-sm font-medium text-[#348ADC]">Add Team Members</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowTeamMembers(!showTeamMembers)}
+              className="flex items-center gap-2 px-4 py-1.5 bg-white dark:bg-[#3d3d3d] border border-gray-200 dark:border-gray-600 hover:border-[#348ADC] hover:bg-gray-50 dark:hover:bg-[#4d4d4d] rounded-full transition-all duration-200 shadow-sm"
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#348ADC" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span className="text-sm font-medium text-[#348ADC]">View Team Members</span>
+            </button>
+
+            {showTeamMembers && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowTeamMembers(false)}></div>
+                <div className="absolute top-full mt-2 left-0 bg-white dark:bg-[#3d3d3d] border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl z-50 w-64">
+                  <div className="p-3 border-b border-gray-200 dark:border-gray-600">
+                    <h3 className="text-sm font-semibold text-[#072741] dark:text-gray-200" style={{ fontFamily: 'Inter, sans-serif' }}>
+                      Team Members ({teamMembers.length})
+                    </h3>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {teamMembers.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        No team members found
+                      </div>
+                    ) : (
+                      teamMembers.map((member, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-[#4d4d4d] transition"
+                        >
+                          <div className="text-sm font-medium text-[#072741] dark:text-gray-200" style={{ fontFamily: 'Inter, sans-serif' }}>
+                            {member.user_fullname}
+                          </div>
+                          <div className="text-xs text-[#348ADC] mt-0.5" style={{ fontFamily: 'Inter, sans-serif' }}>
+                            {member.role}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#3d3d3d] px-3 py-1.5 rounded-full">

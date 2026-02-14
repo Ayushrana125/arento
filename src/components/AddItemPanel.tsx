@@ -98,9 +98,10 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="p-6 max-w-7xl mx-auto">
-            <div className="grid grid-cols-12 gap-6">
-              {/* Basic Information - Wider */}
-              <div className="col-span-5">
+            {/* First Row - Basic and Vendor */}
+            <div className="grid grid-cols-12 gap-6 mb-6">
+              {/* Basic Information */}
+              <div className="col-span-7">
                 <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-4 border-2 border-blue-100 h-full">
                   <h3 className="text-lg font-bold text-[#072741] mb-4 flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -156,7 +157,23 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
                         ))}
                       </select>
                     </div>
+                  </div>
+                </div>
+              </div>
 
+              {/* Vendor Information */}
+              <div className="col-span-5">
+                <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-4 border-2 border-purple-100 h-full">
+                  <h3 className="text-lg font-bold text-[#072741] mb-4 flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9333ea" strokeWidth="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                      </svg>
+                    </div>
+                    Vendor Info
+                  </h3>
+                  <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1.5" style={{ fontFamily: 'Inter, sans-serif' }}>
                         Vendor Name *
@@ -173,9 +190,12 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Stock Information - Narrower */}
-              <div className="col-span-3">
+            {/* Second Row - Stock and Pricing */}
+            <div className="grid grid-cols-12 gap-6">
+              {/* Stock Information */}
+              <div className="col-span-5">
                 <div className="bg-gradient-to-br from-orange-50 to-white rounded-xl p-4 border-2 border-orange-100 h-full">
                   <h3 className="text-lg font-bold text-[#072741] mb-4 flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
@@ -234,8 +254,8 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
                 </div>
               </div>
 
-              {/* Pricing Information - Narrower */}
-              <div className="col-span-4">
+              {/* Pricing Information */}
+              <div className="col-span-7">
                 <div className="bg-gradient-to-br from-green-50 to-white rounded-xl p-4 border-2 border-green-100 h-full">
                   <h3 className="text-lg font-bold text-[#072741] mb-4 flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
