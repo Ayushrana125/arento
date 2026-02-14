@@ -103,9 +103,14 @@ export function TopNavbar() {
         </div>
 
         <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#3d3d3d] px-3 py-1.5 rounded-full">
-          <span className="text-[#072741] dark:text-gray-200 font-medium text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
-            {getDisplayName()}
-          </span>
+          <div className="flex flex-col items-start">
+            <span className="text-[#072741] dark:text-gray-200 font-medium text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {getDisplayName()}
+            </span>
+            <span className="text-[#348ADC] text-xs font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {userData?.role || 'User'}
+            </span>
+          </div>
           <div className="w-8 h-8 rounded-full bg-[#348ADC] flex items-center justify-center text-white font-medium text-xs">
             {getUserInitials()}
           </div>

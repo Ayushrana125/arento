@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNotification } from '../contexts/NotificationContext';
+import { RolesManagement } from './RolesManagement';
+import { UserManagement } from './UserManagement';
 
 export function Settings() {
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'roles'>('general');
   const [theme, setTheme] = useState(() => localStorage.getItem('arento_theme') || 'light');
   const [userId, setUserId] = useState<string | null>(null);
   const [clientId, setClientId] = useState<string | null>(null);
@@ -164,7 +167,10 @@ export function Settings() {
   };
 
   const handleCompanySave = async () => {
-    if (!supabase || !clientId) return;
+    if (!supabase || !clientId || !isOwner) {
+      addNotification('Access Denied', 'Only owners can update company settings.');
+      return;
+    }
     let logoUrl = companyData.logo;
     
     if (logoFile) {
@@ -335,8 +341,55 @@ export function Settings() {
     confirmPassword: ''
   });
 
+  const isOwner = userData.role?.toLowerCase() === 'owner';
+
   return (
     <div className="space-y-6">
+      {/* Tab Switcher */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-2 max-w-2xl">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('general')}
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === 'general'
+                ? 'bg-[#348ADC] text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+            style={{ fontFamily: 'Inter, sans-serif' }}
+          >
+            General Settings
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            disabled={!isOwner}
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === 'users'
+                ? 'bg-[#348ADC] text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            } ${!isOwner ? 'opacity-50 cursor-not-allowed' : ''}`}
+            style={{ fontFamily: 'Inter, sans-serif' }}
+            title={!isOwner ? 'Only owners can access user management' : ''}
+          >
+            User Management
+          </button>
+          <button
+            onClick={() => setActiveTab('roles')}
+            disabled={!isOwner}
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === 'roles'
+                ? 'bg-[#348ADC] text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            } ${!isOwner ? 'opacity-50 cursor-not-allowed' : ''}`}
+            style={{ fontFamily: 'Inter, sans-serif' }}
+            title={!isOwner ? 'Only owners can access roles management' : ''}
+          >
+            Roles Management
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'general' ? (
+        <>
       {/* Company Settings */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -348,7 +401,7 @@ export function Settings() {
               Only owners can modify these settings
             </p>
           </div>
-          {!isEditingCompany && (
+          {!isEditingCompany && isOwner && (
             <button
               onClick={() => setIsEditingCompany(true)}
               className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -774,6 +827,12 @@ export function Settings() {
           </div>
         </div>
       </div>
+        </>
+      ) : activeTab === 'users' ? (
+        <UserManagement clientId={clientId} addNotification={addNotification} userRole={userData.role} />
+      ) : (
+        <RolesManagement clientId={clientId} addNotification={addNotification} userRole={userData.role} />
+      )}
     </div>
   );
 }
