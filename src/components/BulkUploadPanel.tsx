@@ -1,6 +1,8 @@
 import { X, Download, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
+import * as XLSX from 'xlsx';
+import { supabase } from '../lib/supabase';
 
 interface BulkUploadPanelProps {
   isOpen: boolean;
@@ -21,6 +23,7 @@ export function BulkUploadPanel({ isOpen, onClose }: BulkUploadPanelProps) {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addNotification } = useNotification();
 
@@ -68,26 +71,122 @@ export function BulkUploadPanel({ isOpen, onClose }: BulkUploadPanelProps) {
 
   const analyzeFile = (file: File) => {
     setIsAnalyzing(true);
-    // Simulate file analysis
-    setTimeout(() => {
-      setAnalysisData({
-        totalRows: 150,
-        validRows: 142,
-        invalidRows: 8,
-        duplicates: 3,
-        errors: [
-          'Row 15: Missing SKU Code',
-          'Row 23: Invalid price format',
-          'Row 45: Category not found',
-          'Row 67: Duplicate SKU Code',
-          'Row 89: Missing Item Name',
-          'Row 102: Invalid quantity',
-          'Row 118: Duplicate SKU Code',
-          'Row 134: Missing vendor name'
-        ]
-      });
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        let rows: any[][] = [];
+
+        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        } else {
+          const text = e.target?.result as string;
+          const lines = text.split('\n').filter(line => line.trim());
+          rows = lines.map(line => 
+            line.includes('\t') 
+              ? line.split('\t').map(col => col.trim().replace(/"/g, ''))
+              : line.split(',').map(col => col.trim().replace(/"/g, ''))
+          );
+        }
+
+        if (rows.length < 2) {
+          setAnalysisData({
+            totalRows: 0,
+            validRows: 0,
+            invalidRows: 0,
+            duplicates: 0,
+            errors: ['File is empty or invalid format']
+          });
+          setIsAnalyzing(false);
+          return;
+        }
+
+        const dataRows = rows.slice(1);
+        const errors: string[] = [];
+        let validCount = 0;
+        let duplicateCount = 0;
+        const seenSkus = new Set<string>();
+
+        dataRows.forEach((columns, index) => {
+          const rowNum = index + 2;
+          
+          if (columns.length < 9) {
+            errors.push(`Row ${rowNum}: Incomplete data (found ${columns.length} columns, expected 9)`);
+            return;
+          }
+
+          const [sku, name, category, vendor, qty, minStock, normalStock, costPrice, sellingPrice] = columns.map(c => String(c || '').trim());
+          let hasError = false;
+
+          if (!sku) {
+            errors.push(`Row ${rowNum}: Missing SKU Code`);
+            hasError = true;
+          }
+          if (!name) {
+            errors.push(`Row ${rowNum}: Missing Item Name`);
+            hasError = true;
+          }
+          if (!category) {
+            errors.push(`Row ${rowNum}: Missing Category`);
+            hasError = true;
+          }
+          if (!vendor) {
+            errors.push(`Row ${rowNum}: Missing Vendor Name`);
+            hasError = true;
+          }
+          if (!qty || isNaN(Number(qty))) {
+            errors.push(`Row ${rowNum}: Invalid quantity`);
+            hasError = true;
+          }
+          if (!costPrice || isNaN(Number(costPrice))) {
+            errors.push(`Row ${rowNum}: Invalid cost price`);
+            hasError = true;
+          }
+          if (!sellingPrice || isNaN(Number(sellingPrice))) {
+            errors.push(`Row ${rowNum}: Invalid selling price`);
+            hasError = true;
+          }
+
+          if (sku && seenSkus.has(sku)) {
+            errors.push(`Row ${rowNum}: Duplicate SKU Code (${sku})`);
+            duplicateCount++;
+            hasError = true;
+          } else if (sku) {
+            seenSkus.add(sku);
+          }
+
+          if (!hasError) {
+            validCount++;
+          }
+        });
+
+        setAnalysisData({
+          totalRows: dataRows.length,
+          validRows: validCount,
+          invalidRows: dataRows.length - validCount,
+          duplicates: duplicateCount,
+          errors: errors.slice(0, 50)
+        });
+        setIsAnalyzing(false);
+      } catch (error) {
+        addNotification('Error', 'Failed to parse file. Please check the format.');
+        setIsAnalyzing(false);
+      }
+    };
+
+    reader.onerror = () => {
+      addNotification('Error', 'Failed to read file. Please try again.');
       setIsAnalyzing(false);
-    }, 1500);
+    };
+
+    if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -106,14 +205,88 @@ export function BulkUploadPanel({ isOpen, onClose }: BulkUploadPanelProps) {
     if (file) handleFileSelect(file);
   };
 
-  const handleProcessImport = () => {
-    if (!analysisData || analysisData.validRows === 0) return;
+  const handleProcessImport = async () => {
+    if (!analysisData || analysisData.validRows === 0 || !selectedFile) return;
     
-    addNotification('Import Started', `Processing ${analysisData.validRows} items...`);
-    setTimeout(() => {
-      addNotification('Import Completed', `${analysisData.validRows} items imported successfully!`);
-      onClose();
-    }, 2000);
+    setIsSubmitting(true);
+    const userData = localStorage.getItem('arento_user');
+    if (!userData) {
+      addNotification('Error', 'Session expired. Please login again.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { client_id: clientId } = JSON.parse(userData);
+
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          let rows: any[][] = [];
+
+          if (selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls')) {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          } else {
+            const text = e.target?.result as string;
+            const lines = text.split('\n').filter(line => line.trim());
+            rows = lines.map(line => 
+              line.includes('\t') 
+                ? line.split('\t').map(col => col.trim().replace(/"/g, ''))
+                : line.split(',').map(col => col.trim().replace(/"/g, ''))
+            );
+          }
+
+          const dataRows = rows.slice(1);
+          const validItems = [];
+
+          for (const columns of dataRows) {
+            if (columns.length < 9) continue;
+            
+            const [sku, name, category, vendor, qty, minStock, normalStock, costPrice, sellingPrice] = columns.map(c => String(c || '').trim());
+            
+            if (sku && name && category && vendor && !isNaN(Number(qty)) && !isNaN(Number(costPrice)) && !isNaN(Number(sellingPrice))) {
+              validItems.push({
+                client_id: clientId,
+                sku,
+                name,
+                category,
+                vendor_name: vendor,
+                quantity: Number(qty),
+                min_stock: Number(minStock) || 0,
+                normal_stock: Number(normalStock) || 0,
+                cost_price: Number(costPrice),
+                selling_price: Number(sellingPrice)
+              });
+            }
+          }
+
+          const { error } = await supabase.from('inventory_items').insert(validItems);
+          
+          if (error) throw error;
+
+          addNotification('Import Completed', `${validItems.length} items imported successfully!`);
+          window.dispatchEvent(new Event('inventoryUpdated'));
+          onClose();
+        } catch (error: any) {
+          addNotification('Import Failed', 'Unable to import items. Please try again.');
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
+
+      if (selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls')) {
+        reader.readAsArrayBuffer(selectedFile);
+      } else {
+        reader.readAsText(selectedFile);
+      }
+    } catch (error) {
+      addNotification('Import Failed', 'Unable to import items. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -341,16 +514,18 @@ export function BulkUploadPanel({ isOpen, onClose }: BulkUploadPanelProps) {
                 {/* Action Button */}
                 <button
                   onClick={handleProcessImport}
-                  disabled={analysisData.validRows === 0}
+                  disabled={analysisData.validRows === 0 || isSubmitting}
                   className={`w-full px-6 py-4 rounded-lg font-bold text-lg shadow-lg transition ${
-                    analysisData.validRows > 0
+                    analysisData.validRows > 0 && !isSubmitting
                       ? 'bg-[#348ADC] text-white hover:bg-[#2a6fb0]'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  {analysisData.validRows > 0 
-                    ? `Import ${analysisData.validRows} Items` 
-                    : 'No Valid Items to Import'}
+                  {isSubmitting
+                    ? 'Importing...'
+                    : analysisData.validRows > 0 
+                      ? `Import ${analysisData.validRows} Items` 
+                      : 'No Valid Items to Import'}
                 </button>
               </>
             ) : (
