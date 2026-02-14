@@ -1,7 +1,7 @@
 import { Download, Printer } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface BillPreviewProps {
   invoiceNumber: string;
@@ -28,8 +28,37 @@ const mockInventory = [
 ];
 
 export function BillPreview({ invoiceNumber, items, totalAmount, isVisible, mobile, vehicleNo, msName }: BillPreviewProps) {
-  const user = JSON.parse(localStorage.getItem('arento_user') || '{}');
-  const companyName = user.company || 'Shree Ram Auto Parts';
+  const [companyData, setCompanyData] = useState({
+    name: '',
+    mobile: '',
+    address: '',
+    logo: '/client_logo.png',
+    headline: ''
+  });
+
+  useEffect(() => {
+    loadCompanyDataFromLocalStorage();
+    // Listen for settings changes
+    const handleStorageChange = () => {
+      loadCompanyDataFromLocalStorage();
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const loadCompanyDataFromLocalStorage = () => {
+    const userData = localStorage.getItem('arento_user');
+    if (!userData) return;
+    
+    const parsed = JSON.parse(userData);
+    setCompanyData({
+      name: parsed.company_name || '',
+      mobile: parsed.company_mobile || '',
+      address: parsed.company_address || '',
+      logo: parsed.company_logo || '/client_logo.png',
+      headline: parsed.company_headline || ''
+    });
+  };
 
   const getItemName = (sku: string) => {
     return mockInventory.find(item => item.sku === sku)?.name || sku;
@@ -259,21 +288,22 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible, mobi
 
         <div className="bg-[#fffef8] rounded-lg shadow-lg p-8 max-w-3xl mx-auto bill-container" id="bill-content">
           {/* Blessing */}
-          <div className="text-center text-base font-semibold text-[#072741] mb-6 blessing" style={{ fontFamily: 'Poppins, sans-serif' }}>
-            || श्री गणेशाय नमः ||
-          </div>
+          {companyData.headline && (
+            <div className="text-center text-base font-semibold text-[#072741] mb-6 blessing" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              {companyData.headline}
+            </div>
+          )}
 
           {/* Header */}
           <div className="flex items-start justify-between mb-8 pb-6 border-b-2 border-gray-200 header">
             <div>
-              <img src="/client_logo.png" alt="Logo" className="h-16 mb-3 logo" />
+              <img src={companyData.logo} alt="Logo" className="h-16 mb-3 logo" />
               <h1 className="text-2xl font-bold text-[#072741] company-name" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                {companyName}
+                {companyData.name}
               </h1>
               <div className="text-xs text-gray-600 mt-2 max-w-sm company-info" style={{ fontFamily: 'Inter, sans-serif' }}>
-                <div>Mobile: 9324641323</div>
-                <div className="mt-1">Shop No. 3, Vishnu Niwas, Haridas Nagar, R.M. Bhattad Road,</div>
-                <div>Opp. Pulse Hospital, Borivali (W), Mumbai - 400092</div>
+                {companyData.mobile && <div>Mobile: {companyData.mobile}</div>}
+                {companyData.address && <div className="mt-1">{companyData.address}</div>}
               </div>
             </div>
             <div className="text-right invoice-info">

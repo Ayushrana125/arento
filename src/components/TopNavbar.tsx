@@ -35,7 +35,8 @@ export function TopNavbar() {
       const storedUser = localStorage.getItem('arento_user');
       if (storedUser) {
         try {
-          setUserData(JSON.parse(storedUser));
+          const parsed = JSON.parse(storedUser);
+          setUserData(parsed);
         } catch (error) {
           console.error('Error parsing user data:', error);
         }
@@ -49,18 +50,17 @@ export function TopNavbar() {
 
   const getUserInitials = () => {
     if (!userData) return 'US';
-    if (userData.first_name && userData.last_name) {
-      return `${userData.first_name[0]}${userData.last_name[0]}`.toUpperCase();
+    const name = userData.user_fullname || '';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
-    return 'US';
+    return name.substring(0, 2).toUpperCase();
   };
 
   const getDisplayName = () => {
     if (!userData) return 'User';
-    if (userData.first_name && userData.last_name) {
-      return `${userData.first_name} ${userData.last_name}`;
-    }
-    return userData.username || 'User';
+    return userData.user_fullname || 'User';
   };
 
   const getPageInfo = () => {

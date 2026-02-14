@@ -1,5 +1,6 @@
 import { X, Loader, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -26,28 +27,58 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
     setError('');
     setIsLoading(true);
 
-    // Simple bypass - accept any username/password
-    setTimeout(() => {
-      const mockUser = {
-        id: '1',
-        username: formData.username,
-        first_name: 'Vishal',
-        last_name: 'Yadav',
-        company_name: 'Shree Ram Auto Parts',
-        client_id: 'demo-client'
-      };
-      
-      localStorage.setItem('arento_user', JSON.stringify(mockUser));
-      window.dispatchEvent(new Event('storage'));
-      onClose();
-      setFormData({ username: '', password: '' });
-      
-      if (onLoginSuccess) {
-        onLoginSuccess();
-      }
-      
+    if (!supabase) {
+      setError('Database connection error');
       setIsLoading(false);
-    }, 500);
+      return;
+    }
+
+    const { data: user, error: loginError } = await supabase
+      .from('users')
+      .select('user_id, client_id, user_fullname, user_email, role')
+      .eq('user_fullname', formData.username)
+      .eq('user_password', formData.password)
+      .single();
+
+    console.log('Login attempt:', { username: formData.username, password: formData.password });
+    console.log('Query result:', { user, loginError });
+
+    if (loginError || !user) {
+      setError('Invalid username or password');
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: client } = await supabase
+      .from('clients')
+      .select('company_name, mobile_number, office_address, company_logo, billing_headline, gst_number')
+      .eq('client_id', user.client_id)
+      .single();
+
+    const userData = {
+      user_id: user.user_id,
+      client_id: user.client_id,
+      user_fullname: user.user_fullname,
+      user_email: user.user_email,
+      role: user.role,
+      company_name: client?.company_name || '',
+      company_mobile: client?.mobile_number || '',
+      company_address: client?.office_address || '',
+      company_logo: client?.company_logo || '',
+      company_headline: client?.billing_headline || '',
+      company_gst: client?.gst_number || ''
+    };
+
+    localStorage.setItem('arento_user', JSON.stringify(userData));
+    window.dispatchEvent(new Event('storage'));
+    onClose();
+    setFormData({ username: '', password: '' });
+
+    if (onLoginSuccess) {
+      onLoginSuccess();
+    }
+
+    setIsLoading(false);
   };
 
   const handleForgotPassword = () => {
@@ -124,7 +155,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#BCC4C9] hover:text-[#072741] transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Hide" : "Show"}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
