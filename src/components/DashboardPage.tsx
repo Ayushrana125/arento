@@ -1,21 +1,61 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SalePanel } from './SalePanel';
 import { PurchasePanel } from './PurchasePanel';
 import { StockAdjustmentPanel } from './StockAdjustmentPanel';
+import { supabase } from '../lib/supabase';
 
 export function DashboardPage() {
   const [showAmounts, setShowAmounts] = React.useState(true);
   const [isSalePanelOpen, setIsSalePanelOpen] = React.useState(false);
   const [isPurchasePanelOpen, setIsPurchasePanelOpen] = React.useState(false);
   const [isStockAdjustmentPanelOpen, setIsStockAdjustmentPanelOpen] = React.useState(false);
+  const [inventoryStats, setInventoryStats] = React.useState({ total: 0, lowStock: 0, totalValue: 0 });
+  const [lowStockItems, setLowStockItems] = React.useState<any[]>([]);
+  const navigate = useNavigate();
 
-  const dummyLowStock = [
-    { name: 'Brake Pad Set', sku: 'BP-2024', qty: 3, min: 10, status: 'Critical' },
-    { name: 'Engine Oil Filter', sku: 'EOF-445', qty: 8, min: 15, status: 'Critical' },
-    { name: 'Spark Plug', sku: 'SP-890', qty: 18, min: 20, status: 'Low' },
-    { name: 'Air Filter', sku: 'AF-332', qty: 12, min: 15, status: 'Low' },
-    { name: 'Wiper Blade', sku: 'WB-101', qty: 22, min: 25, status: 'Low' },
-  ];
+  React.useEffect(() => {
+    const loadInventoryData = async () => {
+      const userData = localStorage.getItem('arento_user');
+      if (!userData) return;
+
+      const { client_id: clientId } = JSON.parse(userData);
+
+      const { data } = await supabase
+        .from('inventory_items')
+        .select('name, sku, quantity, min_stock, cost_price')
+        .eq('client_id', clientId);
+
+      if (data) {
+        const criticalItems = data.filter(item => item.quantity <= item.min_stock);
+        const totalValue = data.reduce((sum, item) => sum + (item.quantity * item.cost_price), 0);
+        
+        setInventoryStats({
+          total: data.length,
+          lowStock: criticalItems.length,
+          totalValue: Math.round(totalValue)
+        });
+        
+        setLowStockItems(
+          criticalItems
+            .sort((a, b) => (a.quantity / a.min_stock) - (b.quantity / b.min_stock))
+            .slice(0, 5)
+            .map(item => ({
+              name: item.name,
+              sku: item.sku,
+              qty: item.quantity,
+              min: item.min_stock,
+              status: 'Critical'
+            }))
+        );
+      }
+    };
+
+    loadInventoryData();
+    const handleUpdate = () => loadInventoryData();
+    window.addEventListener('inventoryUpdated', handleUpdate);
+    return () => window.removeEventListener('inventoryUpdated', handleUpdate);
+  }, []);
 
   const dummyTransactions = [
     { invoice: 'INV-1024', items: 5, amount: '₹ 3,450', date: 'Today, 2:30 PM' },
@@ -86,7 +126,7 @@ export function DashboardPage() {
           <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl border-2 border-blue-100 shadow-sm p-5 hover:shadow-lg hover:scale-105 transition-all duration-200">
             <div className="flex items-center justify-between mb-2">
               <div className="text-3xl font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                248
+                {inventoryStats.total}
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#348ADC" strokeWidth="2">
@@ -102,7 +142,7 @@ export function DashboardPage() {
           <div className="bg-gradient-to-br from-red-50 to-white rounded-xl border-2 border-red-100 shadow-sm p-5 hover:shadow-lg hover:scale-105 transition-all duration-200">
             <div className="flex items-center justify-between mb-2">
               <div className="text-3xl font-bold text-red-600" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                12
+                {inventoryStats.lowStock}
               </div>
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
@@ -119,7 +159,7 @@ export function DashboardPage() {
           <div className="bg-gradient-to-br from-green-50 to-white rounded-xl border-2 border-green-100 shadow-sm p-5 hover:shadow-lg hover:scale-105 transition-all duration-200">
             <div className="flex items-center justify-between mb-2">
               <div className="text-3xl font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                {showAmounts ? '₹ 4,20,000' : '•••••'}
+                {showAmounts ? `₹ ${inventoryStats.totalValue.toLocaleString('en-IN')}` : '•••••'}
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
@@ -135,7 +175,7 @@ export function DashboardPage() {
 
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-base font-semibold text-[#072741] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
-            Low Stock Items
+            Critical Low Stock Items
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -149,28 +189,36 @@ export function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {dummyLowStock.map((item, idx) => (
-                  <tr key={idx} className={`border-b border-gray-100 ${
-                    item.status === 'Critical' ? 'bg-red-50' : item.status === 'Low' ? 'bg-yellow-50' : ''
-                  }`}>
+                {lowStockItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-gray-500 text-sm">
+                      No critical stock items
+                    </td>
+                  </tr>
+                ) : (
+                  lowStockItems.map((item, idx) => (
+                  <tr key={idx} className="border-b border-gray-100 bg-red-50">
                     <td className="py-3 text-sm text-[#072741]">{item.name}</td>
                     <td className="py-3 text-sm text-gray-600">{item.sku}</td>
                     <td className="py-3 text-sm text-[#072741] font-medium">{item.qty}</td>
                     <td className="py-3 text-sm text-gray-600">{item.min}</td>
                     <td className="py-3">
-                      <span className={`text-xs font-medium ${
-                        item.status === 'Critical' ? 'text-red-600' : 'text-yellow-600'
-                      }`}>
-                        {item.status}
+                      <span className="text-xs font-medium text-red-600">
+                        Critical
                       </span>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
           <div className="mt-4 text-right">
-            <button className="text-sm text-[#348ADC] hover:text-[#2a6fb0] font-medium" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <button 
+              onClick={() => navigate('/app/inventory-analysis')}
+              className="text-sm text-[#348ADC] hover:text-[#2a6fb0] font-medium" 
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
               View All
             </button>
           </div>

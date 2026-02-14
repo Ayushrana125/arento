@@ -10,6 +10,7 @@ interface BillPreviewProps {
     quantity: number;
     price: number;
     subtotal: number;
+    availableStock?: number;
   }>;
   totalAmount: number;
   isVisible: boolean;
@@ -343,7 +344,7 @@ export function BillPreview({ invoiceNumber, items, totalAmount, isVisible, mobi
                 </tr>
               </thead>
               <tbody>
-                {items.filter(item => item.sku && item.quantity > 0).map((item, index) => (
+                {items.filter(item => item.sku && item.quantity > 0 && item.availableStock !== 0).map((item, index) => (
                   <tr key={index} className="border-b border-gray-200">
                     <td className="py-3 text-sm">
                       <div className="font-medium text-[#072741] item-name">{getItemName(item.sku)}</div>

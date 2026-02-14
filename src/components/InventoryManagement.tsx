@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Plus, Upload, Package } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Upload, Package, Trash2, AlertTriangle, Edit } from 'lucide-react';
 import { BulkUploadPanel } from './BulkUploadPanel';
+import { EditItemPanel } from './EditItemPanel';
 import { supabase } from '../lib/supabase';
+import { useNotification } from '../contexts/NotificationContext';
 
 type ViewMode = 'card' | 'table';
 
@@ -30,7 +32,14 @@ export function InventoryManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [inventoryData, setInventoryData] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const itemsPerPage = 25;
+  const { addNotification } = useNotification();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const loadInventory = async () => {
     setIsLoading(true);
@@ -65,9 +74,57 @@ export function InventoryManagement() {
     return () => window.removeEventListener('inventoryUpdated', handleUpdate);
   }, []);
 
+  useEffect(() => {
+    if (!isLoading && inventoryData.length > 0 && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isLoading, inventoryData.length]);
+
   const handleAddItemClick = () => {
     const event = new KeyboardEvent('keydown', { key: 'N' });
     window.dispatchEvent(event);
+  };
+
+  const toggleSelectItem = (id: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === filteredData.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredData.map(item => item.inventory_item_id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedItems.size > 10 && deleteConfirmText !== 'I am confirming the deletion of inventory data') return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .in('inventory_item_id', Array.from(selectedItems));
+
+      if (error) throw error;
+
+      addNotification('Items Deleted', `${selectedItems.size} item(s) deleted successfully.`);
+      setSelectedItems(new Set());
+      setShowDeleteConfirm(false);
+      setDeleteConfirmText('');
+      loadInventory();
+    } catch (error) {
+      addNotification('Error', 'Failed to delete items. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const filteredData = inventoryData.filter(item => {
@@ -158,6 +215,26 @@ export function InventoryManagement() {
             Add Item
           </button>
         </div>
+        <div className="flex items-center gap-2">
+          {selectedItems.size === 1 && (
+            <button
+              onClick={() => setIsEditPanelOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#348ADC] text-white rounded-lg hover:bg-[#2a6fb0] transition-all text-sm font-semibold"
+            >
+              <Edit size={16} />
+              Edit
+            </button>
+          )}
+          {selectedItems.size > 0 && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all text-sm font-medium border border-gray-300"
+            >
+              <Trash2 size={16} />
+              Delete ({selectedItems.size})
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-4">
@@ -188,6 +265,7 @@ export function InventoryManagement() {
 
         <div className="flex items-center gap-2">
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search items..."
             value={searchTerm}
@@ -282,6 +360,14 @@ export function InventoryManagement() {
             <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
             <thead className="bg-[#072741] border-b border-gray-200 sticky top-0 z-10">
               <tr>
+                <th className="text-center text-xs font-semibold text-white px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.size === filteredData.length && filteredData.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                  />
+                </th>
                 <th className="text-left text-xs font-semibold text-white px-4 py-2">SKU Code</th>
                 <th className="text-left text-xs font-semibold text-white px-4 py-2">Item Name</th>
                 <th className="text-left text-xs font-semibold text-white px-4 py-2">Category</th>
@@ -293,7 +379,6 @@ export function InventoryManagement() {
                 <th className="text-left text-xs font-semibold text-white px-4 py-2">Vendor</th>
                 <th className="text-center text-xs font-semibold text-white px-4 py-2">Created</th>
                 <th className="text-center text-xs font-semibold text-white px-4 py-2">Updated</th>
-                <th className="text-center text-xs font-semibold text-white px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -302,6 +387,14 @@ export function InventoryManagement() {
                   key={item.inventory_item_id}
                   className="border-b border-gray-200 hover:bg-gray-50 transition"
                 >
+                  <td className="px-4 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.inventory_item_id)}
+                      onChange={() => toggleSelectItem(item.inventory_item_id)}
+                      className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-2 text-xs font-mono text-[#348ADC]">{item.sku}</td>
                   <td className="px-4 py-2 text-xs text-[#072741] font-medium">{item.name}</td>
                   <td className="px-4 py-2">
@@ -317,11 +410,6 @@ export function InventoryManagement() {
                   <td className="px-4 py-2 text-xs text-gray-600">{item.vendor_name}</td>
                   <td className="px-4 py-2 text-xs text-center text-gray-600">{new Date(item.created_at).toLocaleDateString('en-GB')}</td>
                   <td className="px-4 py-2 text-xs text-center text-gray-600">{new Date(item.updated_at).toLocaleDateString('en-GB')}</td>
-                  <td className="px-4 py-2 text-center">
-                    <button className="text-xs text-[#348ADC] hover:text-[#2a6fb0] font-medium">
-                      Edit
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -368,6 +456,77 @@ export function InventoryManagement() {
       )}
 
       <BulkUploadPanel isOpen={isBulkUploadModalOpen} onClose={() => setIsBulkUploadModalOpen(false)} />
+      <EditItemPanel 
+        isOpen={isEditPanelOpen} 
+        onClose={() => {
+          setIsEditPanelOpen(false);
+          setSelectedItems(new Set());
+        }} 
+        itemId={Array.from(selectedItems)[0] || ''} 
+      />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="text-red-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  Delete Items?
+                </h3>
+                <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  {selectedItems.size} item(s) selected
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
+              This action cannot be undone. The selected inventory items will be permanently deleted from your database.
+            </p>
+            {selectedItems.size > 10 && (
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-gray-700 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  Type the following to confirm:
+                </label>
+                <p className="text-xs text-gray-500 mb-2 font-mono bg-gray-50 p-2 rounded border border-gray-200" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  I am confirming the deletion of inventory data
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Type here..."
+                  style={{ fontFamily: 'Inter, sans-serif' }}
+                />
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmText('');
+                }}
+                className="flex-1 px-4 py-2 border-2 border-gray-300 text-[#072741] rounded-lg hover:bg-gray-50 transition font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteSelected}
+                disabled={isDeleting || (selectedItems.size > 10 && deleteConfirmText !== 'I am confirming the deletion of inventory data')}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

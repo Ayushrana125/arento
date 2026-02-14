@@ -22,7 +22,11 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
   const [existingItemId, setExistingItemId] = useState<string | null>(null);
+  const [skuExists, setSkuExists] = useState(false);
+  const [existingItemName, setExistingItemName] = useState('');
+  const [isCheckingSku, setIsCheckingSku] = useState(false);
   const firstInputRef = useRef<HTMLInputElement>(null);
+  const skuCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { addNotification } = useNotification();
 
   const categories = ['Brakes', 'Filters', 'Fluids', 'Engine', 'Electrical', 'Lighting', 'Cooling', 'Tools', 'Accessories', 'Ignition'];
@@ -55,6 +59,58 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  useEffect(() => {
+    if (skuCheckTimeoutRef.current) {
+      clearTimeout(skuCheckTimeoutRef.current);
+    }
+
+    if (!skuCode.trim()) {
+      setSkuExists(false);
+      setExistingItemName('');
+      return;
+    }
+
+    setIsCheckingSku(true);
+    skuCheckTimeoutRef.current = setTimeout(async () => {
+      const userData = localStorage.getItem('arento_user');
+      if (!userData) return;
+
+      const { client_id: clientId } = JSON.parse(userData);
+
+      const { data } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('sku', skuCode)
+        .single();
+
+      if (data) {
+        setSkuExists(true);
+        setExistingItemName(data.name);
+        setExistingItemId(data.inventory_item_id);
+        setItemName(data.name);
+        setCategory(data.category);
+        setVendorName(data.vendor_name);
+        setCurrentQuantity(data.quantity.toString());
+        setMinStock(data.min_stock.toString());
+        setNormalStock(data.normal_stock.toString());
+        setCostPrice(data.cost_price.toString());
+        setSellingPrice(data.selling_price.toString());
+      } else {
+        setSkuExists(false);
+        setExistingItemName('');
+        setExistingItemId(null);
+      }
+      setIsCheckingSku(false);
+    }, 500);
+
+    return () => {
+      if (skuCheckTimeoutRef.current) {
+        clearTimeout(skuCheckTimeoutRef.current);
+      }
+    };
+  }, [skuCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,15 +241,34 @@ export function AddItemPanel({ isOpen, onClose }: AddItemPanelProps) {
                       <label className="block text-xs font-semibold text-gray-700 mb-1.5" style={{ fontFamily: 'Inter, sans-serif' }}>
                         SKU Code *
                       </label>
-                      <input
-                        ref={firstInputRef}
-                        type="text"
-                        value={skuCode}
-                        onChange={(e) => setSkuCode(e.target.value)}
-                        className="w-full px-3 py-2 border-2 border-[#348ADC] rounded-lg text-sm font-semibold text-[#072741] focus:ring-2 focus:ring-[#348ADC] focus:border-[#348ADC] bg-white"
-                        placeholder="e.g., BP-2024"
-                        required
-                      />
+                      <div className="relative">
+                        <input
+                          ref={firstInputRef}
+                          type="text"
+                          value={skuCode}
+                          onChange={(e) => setSkuCode(e.target.value)}
+                          className={`w-full px-3 py-2 border-2 rounded-lg text-sm font-semibold text-[#072741] focus:ring-2 focus:border-[#348ADC] bg-white ${
+                            skuExists ? 'border-orange-400 focus:ring-orange-400' : 'border-[#348ADC] focus:ring-[#348ADC]'
+                          }`}
+                          placeholder="e.g., BP-2024"
+                          required
+                        />
+                        {isCheckingSku && skuCode && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="w-4 h-4 border-2 border-[#348ADC] border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
+                      </div>
+                      {skuExists && (
+                        <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-2">
+                          <AlertTriangle className="text-orange-600 flex-shrink-0 mt-0.5" size={16} />
+                          <div className="text-xs text-orange-700" style={{ fontFamily: 'Inter, sans-serif' }}>
+                            <strong>Item exists:</strong> {existingItemName}
+                            <br />
+                            <span className="text-orange-600">Submitting will update the existing item.</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div>

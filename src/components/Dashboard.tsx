@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { AlertTriangle, Package } from 'lucide-react';
 
 // Animated Counter Hook
 const useAnimatedCounter = (target: number, shouldAnimate: boolean, duration: number = 1500) => {
@@ -328,6 +329,13 @@ export function Dashboard({ clientId }: DashboardProps = {}) {
   const [hasInitialLoad, setHasInitialLoad] = useState(() => {
     return sessionStorage.getItem('dashboardAnimated') === 'true';
   });
+  const [inventoryStats, setInventoryStats] = useState({
+    total: 0,
+    healthy: 0,
+    low: 0,
+    critical: 0
+  });
+  const [criticalItems, setCriticalItems] = useState<any[]>([]);
 
   useEffect(() => {
     if (!clientId) return;
@@ -337,13 +345,14 @@ export function Dashboard({ clientId }: DashboardProps = {}) {
         const today = new Date().toISOString().split('T')[0];
         
         // Use fast COUNT aggregation queries
-        const [totalResult, prospectResult, leadResult, userResult, meetingsCountResult, meetingsResult] = await Promise.all([
+        const [totalResult, prospectResult, leadResult, userResult, meetingsCountResult, meetingsResult, inventoryResult] = await Promise.all([
           supabase.from('clients_user_data').select('*', { count: 'exact', head: true }).eq('client_id', clientId),
           supabase.from('clients_user_data').select('*', { count: 'exact', head: true }).eq('client_id', clientId).ilike('user_type', 'prospect'),
           supabase.from('clients_user_data').select('*', { count: 'exact', head: true }).eq('client_id', clientId).ilike('user_type', 'lead'),
           supabase.from('clients_user_data').select('*', { count: 'exact', head: true }).eq('client_id', clientId).ilike('user_type', 'user'),
           supabase.from('clients_user_data').select('*', { count: 'exact', head: true }).eq('client_id', clientId).not('meeting_datetime', 'is', null).gte('meeting_datetime', today),
-          supabase.from('clients_user_data').select('first_name, last_name, mobile_number, official_email, meeting_datetime').eq('client_id', clientId).not('meeting_datetime', 'is', null).gte('meeting_datetime', today).order('meeting_datetime', { ascending: true }).limit(5)
+          supabase.from('clients_user_data').select('first_name, last_name, mobile_number, official_email, meeting_datetime').eq('client_id', clientId).not('meeting_datetime', 'is', null).gte('meeting_datetime', today).order('meeting_datetime', { ascending: true }).limit(5),
+          supabase.from('inventory_items').select('name, sku, quantity, min_stock, category').eq('client_id', clientId)
         ]);
 
         const counts = {
@@ -356,6 +365,31 @@ export function Dashboard({ clientId }: DashboardProps = {}) {
         setContactCounts(counts);
         setUpcomingMeetings(meetingsResult.data || []);
         setMeetingsCount(meetingsCountResult.count || 0);
+        
+        // Process inventory data
+        const inventoryItems = inventoryResult.data || [];
+        const stats = {
+          total: inventoryItems.length,
+          healthy: 0,
+          low: 0,
+          critical: 0
+        };
+        const critical: any[] = [];
+        
+        inventoryItems.forEach((item: any) => {
+          const ratio = item.quantity / item.min_stock;
+          if (ratio <= 1) {
+            stats.critical++;
+            critical.push(item);
+          } else if (ratio <= 1.5) {
+            stats.low++;
+          } else {
+            stats.healthy++;
+          }
+        });
+        
+        setInventoryStats(stats);
+        setCriticalItems(critical.sort((a, b) => (a.quantity / a.min_stock) - (b.quantity / b.min_stock)).slice(0, 5));
         
         // Fetch all meetings if count > 5
         if (meetingsCountResult.count && meetingsCountResult.count > 5) {
@@ -549,7 +583,92 @@ export function Dashboard({ clientId }: DashboardProps = {}) {
         </div>
       </div>
 
-      {/* Section 2 - Meetings Table */}
+      {/* Section 2 - Inventory Overview */}
+      <div>
+        <h2 className="text-lg font-semibold text-[#072741] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
+          Inventory Overview
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Inventory Stats Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Package className="text-[#348ADC]" size={16} />
+              </div>
+              <h3 className="text-sm font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                Stock Status
+              </h3>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#072741] mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <AnimatedCounter value={inventoryStats.total} shouldAnimate={shouldAnimateCounters} duration={1200} />
+                </div>
+                <div className="text-xs text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>Total Items</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <AnimatedCounter value={inventoryStats.healthy} shouldAnimate={shouldAnimateCounters} duration={1000} />
+                </div>
+                <div className="text-xs text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>Healthy</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <AnimatedCounter value={inventoryStats.low} shouldAnimate={shouldAnimateCounters} duration={800} />
+                </div>
+                <div className="text-xs text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>Low</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <AnimatedCounter value={inventoryStats.critical} shouldAnimate={shouldAnimateCounters} duration={600} />
+                </div>
+                <div className="text-xs text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>Critical</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Critical Stock Items Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
+                <AlertTriangle className="text-red-600" size={16} />
+              </div>
+              <h3 className="text-sm font-semibold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                Critical Stock Items
+              </h3>
+            </div>
+            {criticalItems.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Package className="text-green-600" size={20} />
+                </div>
+                <p className="text-sm text-gray-500" style={{ fontFamily: 'Inter, sans-serif' }}>All items are well stocked</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {criticalItems.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-[#072741]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        {item.name}
+                      </div>
+                      <div className="text-xs text-gray-500 font-mono">{item.sku}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-red-600" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                        {item.quantity}
+                      </div>
+                      <div className="text-xs text-gray-500">Min: {item.min_stock}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3 - Meetings Table */}
       <div>
         <h2 className="text-lg font-semibold text-[#072741] mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
           Upcoming Meetings
