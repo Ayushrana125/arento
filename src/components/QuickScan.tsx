@@ -25,8 +25,17 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const [searchMode, setSearchMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<ScannedItem[]>([]);
+  const [companyName, setCompanyName] = useState('Arento');
   const scannerRef = useRef<any>(null);
   const { addNotification } = useNotification();
+
+  useEffect(() => {
+    const userData = localStorage.getItem('arento_user');
+    if (userData) {
+      const { company_name } = JSON.parse(userData);
+      if (company_name) setCompanyName(company_name);
+    }
+  }, []);
 
   const fetchItemBySKU = useCallback(async (sku: string) => {
     if (!supabase) return;
@@ -157,7 +166,10 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
     <div className="fixed inset-0 bg-white dark:bg-[#1a1a1a] z-[100] flex flex-col">
       {/* Header */}
       <div className="bg-[#072741] dark:bg-[#1e3a52] p-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">Quick Scan</h2>
+        <div>
+          <h2 className="text-xl font-bold text-white">{companyName}</h2>
+          <p className="text-xs text-white/70">Quick Scan</p>
+        </div>
         <button onClick={onClose} className="text-white">
           <X size={28} />
         </button>
