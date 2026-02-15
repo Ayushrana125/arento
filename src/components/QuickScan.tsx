@@ -32,7 +32,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const [successMessage, setSuccessMessage] = useState({ title: '', details: '' });
   const [billAddMode, setBillAddMode] = useState<'scan' | 'search' | null>(null);
   const [scannedText, setScannedText] = useState<string>('');
-  const [lastScannedTime, setLastScannedTime] = useState<number>(0);
+  const [lastScannedText, setLastScannedText] = useState<string>('');
   const scannerRef = useRef<any>(null);
   const { addNotification } = useNotification();
 
@@ -46,10 +46,9 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   }, []);
 
   const fetchItemBySKU = useCallback(async (sku: string) => {
-    // Debounce: Prevent multiple scans within 1 second
-    const now = Date.now();
-    if (now - lastScannedTime < 1000) return;
-    setLastScannedTime(now);
+    // Prevent duplicate scans
+    if (sku === lastScannedText) return;
+    setLastScannedText(sku);
 
     // Always show what was scanned
     setScannedText(sku);
@@ -69,10 +68,9 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
 
     if (data && !error) {
       addToCart(data);
-    } else {
-      addNotification('Item Not Found', `SKU "${sku}" not found in inventory`);
     }
-  }, [addNotification, lastScannedTime]);
+    // Removed notification to prevent loop
+  }, [lastScannedText]);
 
   const startScanner = useCallback(async () => {
     try {
@@ -82,7 +80,12 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
 
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { 
+          fps: 5,
+          qrbox: { width: 300, height: 300 },
+          aspectRatio: 1.0,
+          disableFlip: false
+        },
         (decodedText: string) => fetchItemBySKU(decodedText),
         () => {}
       );
@@ -101,6 +104,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
 
   useEffect(() => {
     if (isOpen && billAddMode === 'scan') {
+      setLastScannedText('');
       startScanner();
     } else {
       stopScanner();
@@ -366,9 +370,12 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
               </div>
             )}
             
-            <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-lg border-2 border-green-200 dark:border-green-800" style={{ minHeight: '250px' }}></div>
+            <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-lg border-2 border-green-200 dark:border-green-800" style={{ minHeight: '300px' }}></div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2 font-medium">
+              Point camera at QR code or barcode. Works best with clear, well-lit codes.
+            </p>
             <button
-              onClick={() => { setBillAddMode(null); setScannedText(''); }}
+              onClick={() => { setBillAddMode(null); setScannedText(''); setLastScannedText(''); }}
               className="w-full mt-4 py-3 bg-white dark:bg-[#2d2d2d] text-gray-700 dark:text-gray-300 rounded-2xl font-semibold border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition"
             >
               Close Scanner
