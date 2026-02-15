@@ -132,9 +132,10 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       }
       return [...prevCart, { ...item, cartQuantity: 1 }];
     });
-    setSearchMode(false);
+    // Don't close search mode - let user keep adding items
     setSearchTerm('');
     setSearchResults([]);
+    if (navigator.vibrate) navigator.vibrate(100);
   };
 
   const updateCartQuantity = (itemId: string, newQty: number) => {
@@ -160,11 +161,26 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const totalItems = cart.reduce((sum, item) => sum + item.cartQuantity, 0);
 
   const handleConfirmSale = async () => {
-    if (!supabase || cart.length === 0) return;
+    console.log('Confirm button clicked');
+    if (!supabase) {
+      console.error('Supabase not initialized');
+      addNotification('Error', 'Database connection not available');
+      return;
+    }
+    if (cart.length === 0) {
+      console.error('Cart is empty');
+      addNotification('Error', 'Cart is empty');
+      return;
+    }
 
     const userData = localStorage.getItem('arento_user');
-    if (!userData) return;
+    if (!userData) {
+      console.error('User data not found');
+      addNotification('Error', 'User not logged in');
+      return;
+    }
     const { client_id, user_id } = JSON.parse(userData);
+    console.log('User data:', { client_id, user_id });
 
     try {
       // Check stock availability
@@ -175,6 +191,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         }
       }
 
+      console.log('Updating inventory...');
       // Update inventory
       for (const item of cart) {
         const newQuantity = mode === 'sale'
@@ -187,6 +204,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
           .eq('inventory_item_id', item.inventory_item_id);
       }
 
+      console.log('Creating transaction...');
       // Create transaction
       const invoiceNumber = mode === 'sale' 
         ? `INV-${Date.now().toString().slice(-6)}`
@@ -196,7 +214,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       const itemsTable = mode === 'sale' ? 'sales_transaction_items' : 'purchase_transaction_items';
       const transactionIdField = mode === 'sale' ? 'sales_transaction_id' : 'purchase_transaction_id';
 
-      const { data: transaction } = await supabase
+      const { data: transaction, error: transError } = await supabase
         .from(transactionTable)
         .insert({
           client_id,
@@ -208,7 +226,15 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         .select()
         .single();
 
+      if (transError) {
+        console.error('Transaction error:', transError);
+        throw transError;
+      }
+
+      console.log('Transaction created:', transaction);
+
       if (transaction) {
+        console.log('Creating transaction items...');
         for (const item of cart) {
           await supabase
             .from(itemsTable)
@@ -233,6 +259,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       setShowSuccessPopup(true);
       setShowBillPreview(false);
 
+      console.log('Success! Resetting in 2 seconds...');
       setTimeout(() => {
         setShowSuccessPopup(false);
         window.dispatchEvent(new Event('inventoryUpdated'));
@@ -241,7 +268,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       }, 2000);
     } catch (error) {
       console.error('Transaction error:', error);
-      addNotification('Error', 'Failed to process transaction');
+      addNotification('Error', `Failed to process transaction: ${error}`);
     }
   };
 
@@ -398,7 +425,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
             </div>
           </div>
         ) : searchMode ? (
-          <div className="p-4">
+          <div className="p-4 flex flex-col h-full">
             <input
               type="text"
               value={searchTerm}
@@ -407,16 +434,25 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
               className="w-full px-4 py-4 border-2 border-[#348ADC] rounded-xl text-lg mb-4"
               autoFocus
             />
-            <div className="space-y-2 mb-4">
+            <div className="flex-1 overflow-auto space-y-2 mb-4">
               {searchResults.map((item) => (
                 <button
                   key={item.inventory_item_id}
                   onClick={() => addToCart(item)}
-                  className="w-full p-4 bg-gray-50 dark:bg-[#2d2d2d] rounded-xl text-left border-2 border-gray-200 dark:border-gray-700 hover:border-[#348ADC] transition"
+                  className="w-full p-4 bg-gray-50 dark:bg-[#2d2d2d] rounded-xl text-left border-2 border-gray-200 dark:border-gray-700 hover:border-[#348ADC] transition active:scale-95"
                 >
-                  <div className="font-bold text-[#072741] dark:text-white">{item.name}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">SKU: {item.sku} | Stock: {item.quantity}</div>
-                  <div className="text-sm font-semibold text-green-600">₹{item.selling_price}</div>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="font-bold text-[#072741] dark:text-white">{item.name}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">SKU: {item.sku} | Stock: {item.quantity}</div>
+                      <div className="text-sm font-semibold text-green-600">₹{item.selling_price}</div>
+                    </div>
+                    {cart.find(c => c.inventory_item_id === item.inventory_item_id) && (
+                      <div className="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                        {cart.find(c => c.inventory_item_id === item.inventory_item_id)?.cartQuantity}
+                      </div>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
