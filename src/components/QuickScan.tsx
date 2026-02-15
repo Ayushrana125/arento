@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Search, Minus, Plus, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNotification } from '../contexts/NotificationContext';
@@ -29,65 +29,11 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const [vendors, setVendors] = useState<string[]>([]);
   const [selectedVendor, setSelectedVendor] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<any>(null);
   const { addNotification } = useNotification();
 
-  useEffect(() => {
-    if (isOpen) {
-      loadVendors();
-      startScanner();
-    } else {
-      stopScanner();
-    }
-    return () => stopScanner();
-  }, [isOpen]);
-
-  const loadVendors = async () => {
-    const userData = localStorage.getItem('arento_user');
-    if (!userData) return;
-    const { client_id } = JSON.parse(userData);
-
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('vendor_name')
-      .eq('client_id', client_id)
-      .not('vendor_name', 'is', null);
-
-    if (data) {
-      const uniqueVendors = [...new Set(data.map(item => item.vendor_name))];
-      setVendors(uniqueVendors);
-      if (uniqueVendors.length > 0) setSelectedVendor(uniqueVendors[0]);
-    }
-  };
-
-  const startScanner = async () => {
-    try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      const scanner = new Html5Qrcode('qr-reader');
-      scannerRef.current = scanner;
-
-      await scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        onScanSuccess,
-        () => {}
-      );
-    } catch (err) {
-      console.error('Scanner error:', err);
-    }
-  };
-
-  const stopScanner = async () => {
-    if (scannerRef.current?.isScanning) {
-      await scannerRef.current.stop();
-    }
-  };
-
-  const onScanSuccess = async (decodedText: string) => {
-    await fetchItemBySKU(decodedText);
-  };
-
-  const fetchItemBySKU = async (sku: string) => {
+  const fetchItemBySKU = useCallback(async (sku: string) => {
+    if (!supabase) return;
     const userData = localStorage.getItem('arento_user');
     if (!userData) return;
     const { client_id } = JSON.parse(userData);
@@ -103,13 +49,72 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       setScannedItem(data);
       setIsScanning(false);
       setItemQuantity(1);
-      navigator.vibrate?.(200);
+      if (navigator.vibrate) navigator.vibrate(200);
     } else {
       addNotification('Item Not Found', `SKU ${sku} not found in inventory`);
     }
-  };
+  }, [addNotification]);
+
+  const startScanner = useCallback(async () => {
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode');
+      const scanner = new Html5Qrcode('qr-reader');
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText: string) => fetchItemBySKU(decodedText),
+        () => {}
+      );
+    } catch (err) {
+      console.error('Scanner error:', err);
+    }
+  }, [fetchItemBySKU]);
+
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current?.isScanning) {
+      try {
+        await scannerRef.current.stop();
+      } catch (err) {
+        console.error('Stop scanner error:', err);
+      }
+    }
+  }, []);
+
+  const loadVendors = useCallback(async () => {
+    if (!supabase) return;
+    const userData = localStorage.getItem('arento_user');
+    if (!userData) return;
+    const { client_id } = JSON.parse(userData);
+
+    const { data } = await supabase
+      .from('inventory_items')
+      .select('vendor_name')
+      .eq('client_id', client_id)
+      .not('vendor_name', 'is', null);
+
+    if (data) {
+      const uniqueVendors = [...new Set(data.map(item => item.vendor_name))];
+      setVendors(uniqueVendors);
+      if (uniqueVendors.length > 0) setSelectedVendor(uniqueVendors[0]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadVendors();
+      startScanner();
+    } else {
+      stopScanner();
+    }
+    return () => {
+      stopScanner();
+    };
+  }, [isOpen, loadVendors, startScanner, stopScanner]);
 
   const handleSearch = async (term: string) => {
+    if (!supabase) return;
     setSearchTerm(term);
     if (term.length < 2) {
       setSearchResults([]);
@@ -138,12 +143,15 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   };
 
   const handleConfirm = async () => {
-    if (!scannedItem) return;
+    if (!supabase || !scannedItem) return;
     setIsProcessing(true);
 
     const userData = localStorage.getItem('arento_user');
-    if (!userData) return;
-    const { client_id, user_id } = JSON.parse(userData);
+    if (!userData) {
+      setIsProcessing(false);
+      return;
+    }
+    const { client_id } = JSON.parse(userData);
 
     try {
       if (mode === 'sale') {
@@ -187,14 +195,15 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
     setSearchMode(false);
     setSearchTerm('');
     setSearchResults([]);
-    startScanner();
+    if (isOpen) {
+      startScanner();
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-[#072741] z-[100] flex flex-col">
-      {/* Header */}
       <div className="bg-white p-4 flex items-center justify-between shadow-lg">
         <h2 className="text-xl font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
           Quick Scan
@@ -204,15 +213,12 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         </button>
       </div>
 
-      {/* Mode Toggle */}
       <div className="bg-white px-4 pb-4 shadow-md">
         <div className="flex gap-2">
           <button
             onClick={() => setMode('sale')}
             className={`flex-1 py-3 rounded-lg font-bold text-lg transition ${
-              mode === 'sale'
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-200 text-gray-600'
+              mode === 'sale' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
             }`}
           >
             SALE
@@ -220,9 +226,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
           <button
             onClick={() => setMode('purchase')}
             className={`flex-1 py-3 rounded-lg font-bold text-lg transition ${
-              mode === 'purchase'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-600'
+              mode === 'purchase' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
             }`}
           >
             PURCHASE
@@ -230,7 +234,6 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         </div>
       </div>
 
-      {/* Scanner or Item Details */}
       <div className="flex-1 overflow-auto">
         {isScanning && !searchMode ? (
           <div className="flex flex-col h-full">
@@ -272,10 +275,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
                 </button>
               ))}
             </div>
-            <button
-              onClick={resetScan}
-              className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold"
-            >
+            <button onClick={resetScan} className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold">
               Back to Scanner
             </button>
           </div>
@@ -296,7 +296,9 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
                 </div>
                 <div className="bg-orange-50 rounded-lg p-4">
                   <div className="text-sm text-gray-600 mb-1">Price</div>
-                  <div className="text-3xl font-bold text-orange-600">₹{mode === 'sale' ? scannedItem.selling_price : scannedItem.cost_price}</div>
+                  <div className="text-3xl font-bold text-orange-600">
+                    ₹{mode === 'sale' ? scannedItem.selling_price : scannedItem.cost_price}
+                  </div>
                 </div>
               </div>
 
@@ -351,18 +353,13 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
                 onClick={handleConfirm}
                 disabled={isProcessing}
                 className={`w-full py-5 rounded-xl font-bold text-xl flex items-center justify-center gap-3 ${
-                  mode === 'sale'
-                    ? 'bg-green-500 hover:bg-green-600 text-white'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  mode === 'sale' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
                 } disabled:opacity-50`}
               >
                 <Check size={28} />
                 {isProcessing ? 'Processing...' : `CONFIRM ${mode.toUpperCase()}`}
               </button>
-              <button
-                onClick={resetScan}
-                className="w-full py-4 bg-gray-200 text-gray-700 rounded-xl font-semibold text-lg"
-              >
+              <button onClick={resetScan} className="w-full py-4 bg-gray-200 text-gray-700 rounded-xl font-semibold text-lg">
                 Scan Next Item
               </button>
             </div>
