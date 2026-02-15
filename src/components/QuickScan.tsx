@@ -15,7 +15,6 @@ interface ScannedItem {
   quantity: number;
   selling_price: number;
   cost_price: number;
-  vendor_name: string;
 }
 
 export function QuickScan({ isOpen, onClose }: QuickScanProps) {
@@ -26,9 +25,6 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const [searchMode, setSearchMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<ScannedItem[]>([]);
-  const [vendors, setVendors] = useState<string[]>([]);
-  const [selectedVendor, setSelectedVendor] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
   const scannerRef = useRef<any>(null);
   const { addNotification } = useNotification();
 
@@ -48,10 +44,9 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
     if (data && !error) {
       setScannedItem(data);
       setIsScanning(false);
-      setItemQuantity(1);
       if (navigator.vibrate) navigator.vibrate(200);
     } else {
-      addNotification('Item Not Found', `SKU ${sku} not found in inventory`);
+      addNotification('Item Not Found', `SKU ${sku} not found`);
     }
   }, [addNotification]);
 
@@ -76,42 +71,18 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
     if (scannerRef.current?.isScanning) {
       try {
         await scannerRef.current.stop();
-      } catch (err) {
-        console.error('Stop scanner error:', err);
-      }
-    }
-  }, []);
-
-  const loadVendors = useCallback(async () => {
-    if (!supabase) return;
-    const userData = localStorage.getItem('arento_user');
-    if (!userData) return;
-    const { client_id } = JSON.parse(userData);
-
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('vendor_name')
-      .eq('client_id', client_id)
-      .not('vendor_name', 'is', null);
-
-    if (data) {
-      const uniqueVendors = [...new Set(data.map(item => item.vendor_name))];
-      setVendors(uniqueVendors);
-      if (uniqueVendors.length > 0) setSelectedVendor(uniqueVendors[0]);
+      } catch {}
     }
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      loadVendors();
+    if (isOpen && isScanning && !searchMode) {
       startScanner();
     } else {
       stopScanner();
     }
-    return () => {
-      stopScanner();
-    };
-  }, [isOpen, loadVendors, startScanner, stopScanner]);
+    return () => { stopScanner(); };
+  }, [isOpen, isScanning, searchMode, startScanner, stopScanner]);
 
   const handleSearch = async (term: string) => {
     if (!supabase) return;
@@ -139,53 +110,36 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
     setScannedItem(item);
     setIsScanning(false);
     setSearchMode(false);
-    setItemQuantity(1);
   };
 
   const handleConfirm = async () => {
     if (!supabase || !scannedItem) return;
-    setIsProcessing(true);
 
     const userData = localStorage.getItem('arento_user');
-    if (!userData) {
-      setIsProcessing(false);
-      return;
-    }
+    if (!userData) return;
     const { client_id } = JSON.parse(userData);
 
-    try {
-      if (mode === 'sale') {
-        const newQuantity = scannedItem.quantity - itemQuantity;
-        if (newQuantity < 0) {
-          addNotification('Insufficient Stock', `Only ${scannedItem.quantity} units available`);
-          setIsProcessing(false);
-          return;
-        }
+    const newQuantity = mode === 'sale' 
+      ? scannedItem.quantity - itemQuantity 
+      : scannedItem.quantity + itemQuantity;
 
-        await supabase
-          .from('inventory_items')
-          .update({ quantity: newQuantity })
-          .eq('inventory_item_id', scannedItem.inventory_item_id);
-
-        addNotification('Sale Recorded', `${itemQuantity}x ${scannedItem.name} sold`);
-      } else {
-        const newQuantity = scannedItem.quantity + itemQuantity;
-
-        await supabase
-          .from('inventory_items')
-          .update({ quantity: newQuantity })
-          .eq('inventory_item_id', scannedItem.inventory_item_id);
-
-        addNotification('Purchase Recorded', `${itemQuantity}x ${scannedItem.name} added`);
-      }
-
-      window.dispatchEvent(new Event('inventoryUpdated'));
-      resetScan();
-    } catch (error) {
-      addNotification('Error', 'Failed to process transaction');
-    } finally {
-      setIsProcessing(false);
+    if (mode === 'sale' && newQuantity < 0) {
+      addNotification('Insufficient Stock', `Only ${scannedItem.quantity} units available`);
+      return;
     }
+
+    await supabase
+      .from('inventory_items')
+      .update({ quantity: newQuantity })
+      .eq('inventory_item_id', scannedItem.inventory_item_id);
+
+    addNotification(
+      mode === 'sale' ? 'Sale Recorded' : 'Purchase Recorded',
+      `${itemQuantity}x ${scannedItem.name}`
+    );
+
+    window.dispatchEvent(new Event('inventoryUpdated'));
+    resetScan();
   };
 
   const resetScan = () => {
@@ -195,38 +149,35 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
     setSearchMode(false);
     setSearchTerm('');
     setSearchResults([]);
-    if (isOpen) {
-      startScanner();
-    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-[#072741] z-[100] flex flex-col">
-      <div className="bg-white p-4 flex items-center justify-between shadow-lg">
-        <h2 className="text-xl font-bold text-[#072741]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-          Quick Scan
-        </h2>
-        <button onClick={onClose} className="text-gray-600 hover:text-[#072741]">
+    <div className="fixed inset-0 bg-white dark:bg-[#1a1a1a] z-[100] flex flex-col">
+      {/* Header */}
+      <div className="bg-[#072741] dark:bg-[#1e3a52] p-4 flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white">Quick Scan</h2>
+        <button onClick={onClose} className="text-white">
           <X size={28} />
         </button>
       </div>
 
-      <div className="bg-white px-4 pb-4 shadow-md">
+      {/* Mode Toggle */}
+      <div className="p-4 bg-gray-50 dark:bg-[#2d2d2d]">
         <div className="flex gap-2">
           <button
             onClick={() => setMode('sale')}
-            className={`flex-1 py-3 rounded-lg font-bold text-lg transition ${
-              mode === 'sale' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
+            className={`flex-1 py-4 rounded-xl font-bold text-lg transition ${
+              mode === 'sale' ? 'bg-green-500 text-white' : 'bg-white dark:bg-[#3d3d3d] text-gray-600 dark:text-gray-300'
             }`}
           >
             SALE
           </button>
           <button
             onClick={() => setMode('purchase')}
-            className={`flex-1 py-3 rounded-lg font-bold text-lg transition ${
-              mode === 'purchase' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+            className={`flex-1 py-4 rounded-xl font-bold text-lg transition ${
+              mode === 'purchase' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-[#3d3d3d] text-gray-600 dark:text-gray-300'
             }`}
           >
             PURCHASE
@@ -234,18 +185,18 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        {isScanning && !searchMode ? (
+        {isScanning && !searchMode && !scannedItem ? (
           <div className="flex flex-col h-full">
             <div id="qr-reader" className="flex-1"></div>
-            <div className="p-4 bg-white">
+            <div className="p-4">
               <button
                 onClick={() => {
                   setSearchMode(true);
                   setIsScanning(false);
-                  stopScanner();
                 }}
-                className="w-full py-4 bg-[#348ADC] text-white rounded-lg font-bold text-lg flex items-center justify-center gap-2"
+                className="w-full py-4 bg-[#348ADC] text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2"
               >
                 <Search size={24} />
                 Search Manually
@@ -253,13 +204,13 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
             </div>
           </div>
         ) : searchMode ? (
-          <div className="p-4 bg-white h-full">
+          <div className="p-4">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search by name or SKU..."
-              className="w-full px-4 py-4 border-2 border-[#348ADC] rounded-lg text-lg mb-4"
+              className="w-full px-4 py-4 border-2 border-[#348ADC] rounded-xl text-lg mb-4"
               autoFocus
             />
             <div className="space-y-2">
@@ -267,83 +218,52 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
                 <button
                   key={item.inventory_item_id}
                   onClick={() => selectItem(item)}
-                  className="w-full p-4 bg-gray-50 rounded-lg text-left border-2 border-gray-200 hover:border-[#348ADC] transition"
+                  className="w-full p-4 bg-gray-50 dark:bg-[#2d2d2d] rounded-xl text-left border-2 border-gray-200 dark:border-gray-700 hover:border-[#348ADC] transition"
                 >
-                  <div className="font-bold text-[#072741]">{item.name}</div>
-                  <div className="text-sm text-gray-600">SKU: {item.sku} | Stock: {item.quantity}</div>
+                  <div className="font-bold text-[#072741] dark:text-white">{item.name}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">SKU: {item.sku} | Stock: {item.quantity}</div>
                   <div className="text-sm font-semibold text-green-600">₹{item.selling_price}</div>
                 </button>
               ))}
             </div>
-            <button onClick={resetScan} className="w-full mt-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold">
+            <button 
+              onClick={resetScan} 
+              className="w-full mt-4 py-3 bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 rounded-xl font-semibold"
+            >
               Back to Scanner
             </button>
           </div>
         ) : scannedItem ? (
-          <div className="p-6 bg-white h-full flex flex-col">
+          <div className="p-6 flex flex-col h-full">
             <div className="flex-1">
-              <div className="bg-blue-50 rounded-xl p-6 mb-6">
-                <h3 className="text-2xl font-bold text-[#072741] mb-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                  {scannedItem.name}
-                </h3>
-                <p className="text-gray-600 font-mono text-lg">SKU: {scannedItem.sku}</p>
+              <div className="bg-gray-50 dark:bg-[#2d2d2d] p-6 rounded-2xl mb-6">
+                <h3 className="text-2xl font-bold text-[#072741] dark:text-white mb-2">{scannedItem.name}</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-1">SKU: {scannedItem.sku}</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-1">Current Stock: {scannedItem.quantity}</p>
+                <p className="text-2xl font-bold text-green-600 mt-3">₹{scannedItem.selling_price}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-green-50 rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-1">Current Stock</div>
-                  <div className="text-3xl font-bold text-green-600">{scannedItem.quantity}</div>
-                </div>
-                <div className="bg-orange-50 rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-1">Price</div>
-                  <div className="text-3xl font-bold text-orange-600">
-                    ₹{mode === 'sale' ? scannedItem.selling_price : scannedItem.cost_price}
-                  </div>
-                </div>
-              </div>
-
-              {mode === 'purchase' && (
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Vendor</label>
-                  <select
-                    value={selectedVendor}
-                    onChange={(e) => setSelectedVendor(e.target.value)}
-                    className="w-full px-4 py-4 border-2 border-[#348ADC] rounded-lg text-lg"
-                  >
-                    {vendors.map(vendor => (
-                      <option key={vendor} value={vendor}>{vendor}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Quantity</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Quantity</label>
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setItemQuantity(Math.max(1, itemQuantity - 1))}
-                    className="w-16 h-16 bg-red-500 text-white rounded-xl font-bold text-2xl flex items-center justify-center"
+                    className="w-16 h-16 bg-gray-200 dark:bg-[#3d3d3d] rounded-xl flex items-center justify-center"
                   >
-                    <Minus size={32} />
+                    <Minus size={24} />
                   </button>
-                  <div className="flex-1 text-center">
-                    <div className="text-5xl font-bold text-[#072741]">{itemQuantity}</div>
-                  </div>
+                  <input
+                    type="number"
+                    value={itemQuantity}
+                    onChange={(e) => setItemQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="flex-1 text-center text-3xl font-bold py-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl"
+                  />
                   <button
                     onClick={() => setItemQuantity(itemQuantity + 1)}
-                    className="w-16 h-16 bg-green-500 text-white rounded-xl font-bold text-2xl flex items-center justify-center"
+                    className="w-16 h-16 bg-gray-200 dark:bg-[#3d3d3d] rounded-xl flex items-center justify-center"
                   >
-                    <Plus size={32} />
+                    <Plus size={24} />
                   </button>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold text-gray-700">Total Amount</span>
-                  <span className="text-3xl font-bold text-[#348ADC]">
-                    ₹{(itemQuantity * (mode === 'sale' ? scannedItem.selling_price : scannedItem.cost_price)).toFixed(2)}
-                  </span>
                 </div>
               </div>
             </div>
@@ -351,16 +271,18 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
             <div className="space-y-3">
               <button
                 onClick={handleConfirm}
-                disabled={isProcessing}
-                className={`w-full py-5 rounded-xl font-bold text-xl flex items-center justify-center gap-3 ${
-                  mode === 'sale' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
-                } disabled:opacity-50`}
+                className={`w-full py-5 rounded-xl font-bold text-xl text-white flex items-center justify-center gap-2 ${
+                  mode === 'sale' ? 'bg-green-500' : 'bg-blue-500'
+                }`}
               >
-                <Check size={28} />
-                {isProcessing ? 'Processing...' : `CONFIRM ${mode.toUpperCase()}`}
+                <Check size={24} />
+                Confirm {mode === 'sale' ? 'Sale' : 'Purchase'}
               </button>
-              <button onClick={resetScan} className="w-full py-4 bg-gray-200 text-gray-700 rounded-xl font-semibold text-lg">
-                Scan Next Item
+              <button
+                onClick={resetScan}
+                className="w-full py-4 bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 rounded-xl font-semibold"
+              >
+                Scan Another Item
               </button>
             </div>
           </div>
