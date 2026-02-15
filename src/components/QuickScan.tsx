@@ -74,8 +74,15 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       const scanner = new Html5Qrcode('qr-reader');
       scannerRef.current = scanner;
 
+      const devices = await Html5Qrcode.getCameras();
+      const backCamera = devices.find(device => 
+        device.label.toLowerCase().includes('back') || 
+        device.label.toLowerCase().includes('rear') ||
+        device.label.toLowerCase().includes('environment')
+      ) || devices[devices.length - 1];
+
       await scanner.start(
-        { facingMode: { exact: 'environment' } },
+        backCamera.id,
         { 
           fps: 30,
           qrbox: function(viewfinderWidth, viewfinderHeight) {
