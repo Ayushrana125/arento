@@ -75,14 +75,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       scannerRef.current = scanner;
 
       await scanner.start(
-        { 
-          facingMode: 'environment',
-          advanced: [
-            { zoom: 2.0 },
-            { focusMode: 'continuous' },
-            { exposureMode: 'continuous' }
-          ]
-        },
+        { facingMode: 'environment' },
         { 
           fps: 30,
           qrbox: function(viewfinderWidth, viewfinderHeight) {
