@@ -46,8 +46,11 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   }, []);
 
   const fetchItemBySKU = useCallback(async (sku: string) => {
+    // Prevent duplicate scans
     if (sku === lastScannedText) return;
     setLastScannedText(sku);
+
+    // Always show what was scanned
     setScannedText(sku);
     if (navigator.vibrate) navigator.vibrate(100);
 
@@ -66,6 +69,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
     if (data && !error) {
       addToCart(data);
     }
+    // Removed notification to prevent loop
   }, [lastScannedText]);
 
   const startScanner = useCallback(async () => {
@@ -74,30 +78,13 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       const scanner = new Html5Qrcode('qr-reader');
       scannerRef.current = scanner;
 
-      const devices = await Html5Qrcode.getCameras();
-      const backCamera = devices.find(d => 
-        d.label.toLowerCase().includes('back') ||
-        d.label.toLowerCase().includes('rear') ||
-        d.label.toLowerCase().includes('environment') ||
-        d.label.includes('0')
-      );
-      
-      const cameraId = backCamera ? backCamera.id : devices[devices.length - 1]?.id;
-
       await scanner.start(
-        cameraId,
+        { facingMode: 'environment' },
         { 
-          fps: 30,
-          qrbox: function(viewfinderWidth, viewfinderHeight) {
-            return { 
-              width: Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8), 
-              height: Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8) 
-            };
-          },
-          videoConstraints: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
+          fps: 5,
+          qrbox: { width: 300, height: 300 },
+          aspectRatio: 1.0,
+          disableFlip: false
         },
         (decodedText: string) => fetchItemBySKU(decodedText),
         () => {}
@@ -252,6 +239,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
 
   return (
     <div className="h-full bg-white dark:bg-[#1a1a1a] flex flex-col">
+      {/* Success Popup */}
       {showSuccessPopup && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-[#2d2d2d] rounded-2xl p-8 mx-4 max-w-sm w-full shadow-2xl animate-bounce">
@@ -266,6 +254,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         </div>
       )}
 
+      {/* Header */}
       <div className="bg-gradient-to-br from-[#348ADC] via-[#2a7bc4] to-[#1e6aaf] p-5 pb-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -281,6 +270,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         </div>
       </div>
 
+      {/* Mode Toggle */}
       <div className="px-4 -mt-3 mb-4">
         <div className="flex gap-2 bg-white dark:bg-[#1e1e1e] p-1.5 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800">
           <button
@@ -306,7 +296,9 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         </div>
       </div>
 
+      {/* Bill Page - Main Content */}
       <div className="flex-1 overflow-auto px-4 pb-4 bg-gradient-to-b from-gray-50 to-white dark:from-[#0d0d0d] dark:to-[#1a1a1a]">
+        {/* Cart Items */}
         {cart.map((item) => (
           <div key={item.inventory_item_id} className="bg-white dark:bg-[#1e1e1e] p-4 rounded-2xl mb-3 shadow-md hover:shadow-xl border border-gray-100 dark:border-gray-800 transition-all duration-300 hover:scale-[1.02]">
             <div className="flex justify-between items-start mb-3">
@@ -342,6 +334,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
           </div>
         ))}
 
+        {/* Add Items Section */}
         {billAddMode === null && (
           <div className="mt-2 p-6 bg-gradient-to-br from-gray-50 to-white dark:from-[#1e1e1e] dark:to-[#2d2d2d] rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 shadow-sm">
             <p className="text-center text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
@@ -366,18 +359,20 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
           </div>
         )}
 
+        {/* Scanner */}
         {billAddMode === 'scan' && (
           <div className="mt-2">
+            {/* Scanned Text Display */}
             {scannedText && (
               <div className="mb-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border-2 border-green-200 dark:border-green-800 shadow-md">
-                <p className="text-xs text-gray-600 dark:text-gray-400 font-bold mb-1">Decoded:</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-bold mb-1">Decoded Text:</p>
                 <p className="text-sm font-black text-gray-900 dark:text-white break-all">{scannedText}</p>
               </div>
             )}
             
-            <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-lg border-2 border-green-200 dark:border-green-800" style={{ minHeight: '400px' }}></div>
+            <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-lg border-2 border-green-200 dark:border-green-800" style={{ minHeight: '300px' }}></div>
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2 font-medium">
-              Optimized for fast scanning • Hold steady for best results
+              Point camera at QR code or barcode. Works best with clear, well-lit codes.
             </p>
             <button
               onClick={() => { setBillAddMode(null); setScannedText(''); setLastScannedText(''); }}
@@ -388,6 +383,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
           </div>
         )}
 
+        {/* Search */}
         {billAddMode === 'search' && (
           <div className="mt-2">
             <div className="relative">
@@ -433,6 +429,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         )}
       </div>
 
+      {/* Footer - Total & Confirm */}
       {cart.length > 0 && (
         <div className="p-5 bg-white dark:bg-[#1e1e1e] border-t border-gray-200 dark:border-gray-800 shadow-2xl backdrop-blur-lg">
           <div className="flex justify-between items-center mb-4">
