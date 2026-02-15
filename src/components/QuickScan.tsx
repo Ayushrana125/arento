@@ -31,6 +31,8 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', details: '' });
   const [billAddMode, setBillAddMode] = useState<'scan' | 'search' | null>(null);
+  const [scannedText, setScannedText] = useState<string>('');
+  const [lastScannedTime, setLastScannedTime] = useState<number>(0);
   const scannerRef = useRef<any>(null);
   const { addNotification } = useNotification();
 
@@ -44,6 +46,15 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   }, []);
 
   const fetchItemBySKU = useCallback(async (sku: string) => {
+    // Debounce: Prevent multiple scans within 1 second
+    const now = Date.now();
+    if (now - lastScannedTime < 1000) return;
+    setLastScannedTime(now);
+
+    // Always show what was scanned
+    setScannedText(sku);
+    if (navigator.vibrate) navigator.vibrate(100);
+
     if (!supabase) return;
     const userData = localStorage.getItem('arento_user');
     if (!userData) return;
@@ -58,11 +69,10 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
 
     if (data && !error) {
       addToCart(data);
-      if (navigator.vibrate) navigator.vibrate(100);
     } else {
-      addNotification('Item Not Found', `SKU ${sku} not found`);
+      addNotification('Item Not Found', `SKU "${sku}" not found in inventory`);
     }
-  }, [addNotification]);
+  }, [addNotification, lastScannedTime]);
 
   const startScanner = useCallback(async () => {
     try {
@@ -348,9 +358,17 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         {/* Scanner */}
         {billAddMode === 'scan' && (
           <div className="mt-2">
+            {/* Scanned Text Display */}
+            {scannedText && (
+              <div className="mb-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border-2 border-green-200 dark:border-green-800 shadow-md">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-bold mb-1">Decoded Text:</p>
+                <p className="text-sm font-black text-gray-900 dark:text-white break-all">{scannedText}</p>
+              </div>
+            )}
+            
             <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-lg border-2 border-green-200 dark:border-green-800" style={{ minHeight: '250px' }}></div>
             <button
-              onClick={() => setBillAddMode(null)}
+              onClick={() => { setBillAddMode(null); setScannedText(''); }}
               className="w-full mt-4 py-3 bg-white dark:bg-[#2d2d2d] text-gray-700 dark:text-gray-300 rounded-2xl font-semibold border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition"
             >
               Close Scanner
