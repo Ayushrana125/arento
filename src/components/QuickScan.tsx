@@ -179,8 +179,8 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       addNotification('Error', 'User not logged in');
       return;
     }
-    const { client_id, user_id } = JSON.parse(userData);
-    console.log('User data:', { client_id, user_id });
+    const { client_id } = JSON.parse(userData);
+    console.log('User data:', { client_id });
 
     try {
       // Check stock availability
@@ -192,7 +192,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       }
 
       console.log('Updating inventory...');
-      // Update inventory
+      // Update inventory quantities
       for (const item of cart) {
         const newQuantity = mode === 'sale'
           ? item.quantity - item.cartQuantity
@@ -204,49 +204,9 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
           .eq('inventory_item_id', item.inventory_item_id);
       }
 
-      console.log('Creating transaction...');
-      // Create transaction
       const invoiceNumber = mode === 'sale' 
         ? `INV-${Date.now().toString().slice(-6)}`
         : `PUR-${Date.now().toString().slice(-6)}`;
-
-      const transactionTable = mode === 'sale' ? 'sales_transactions' : 'purchase_transactions';
-      const itemsTable = mode === 'sale' ? 'sales_transaction_items' : 'purchase_transaction_items';
-      const transactionIdField = mode === 'sale' ? 'sales_transaction_id' : 'purchase_transaction_id';
-
-      const { data: transaction, error: transError } = await supabase
-        .from(transactionTable)
-        .insert({
-          client_id,
-          user_id,
-          invoice_number: invoiceNumber,
-          total_amount: totalAmount,
-          transaction_date: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (transError) {
-        console.error('Transaction error:', transError);
-        throw transError;
-      }
-
-      console.log('Transaction created:', transaction);
-
-      if (transaction) {
-        console.log('Creating transaction items...');
-        for (const item of cart) {
-          await supabase
-            .from(itemsTable)
-            .insert({
-              [transactionIdField]: transaction[transactionIdField],
-              inventory_item_id: item.inventory_item_id,
-              quantity: item.cartQuantity,
-              unit_price: mode === 'sale' ? item.selling_price : item.cost_price,
-              subtotal: (mode === 'sale' ? item.selling_price : item.cost_price) * item.cartQuantity
-            });
-        }
-      }
 
       const message = `Invoice: ${invoiceNumber}\nItems: ${totalItems}\nTotal: ₹${totalAmount.toFixed(2)}`;
 
@@ -355,15 +315,21 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowBillPreview(false)}
-                className="flex-1 py-4 rounded-2xl font-bold text-lg bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300"
+                onClick={() => {
+                  console.log('Back button clicked');
+                  setShowBillPreview(false);
+                }}
+                className="flex-1 py-4 rounded-2xl font-bold text-lg bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 active:scale-95 transition"
               >
                 Back
               </button>
               <button
-                onClick={handleConfirmSale}
-                className={`flex-1 py-4 rounded-2xl font-bold text-lg text-white ${
-                  mode === 'sale' ? 'bg-green-500' : 'bg-blue-500'
+                onClick={() => {
+                  console.log('Confirm button clicked - starting handleConfirmSale');
+                  handleConfirmSale();
+                }}
+                className={`flex-1 py-4 rounded-2xl font-bold text-lg text-white active:scale-95 transition ${
+                  mode === 'sale' ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
                 }`}
               >
                 Confirm
