@@ -81,10 +81,17 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       await scanner.start(
         { facingMode: 'environment' },
         { 
-          fps: 5,
-          qrbox: { width: 300, height: 300 },
-          aspectRatio: 1.0,
-          disableFlip: false
+          fps: 30,
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            return { 
+              width: Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8), 
+              height: Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8) 
+            };
+          },
+          videoConstraints: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
         },
         (decodedText: string) => fetchItemBySKU(decodedText),
         () => {}
