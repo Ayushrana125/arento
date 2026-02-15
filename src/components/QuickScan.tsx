@@ -32,6 +32,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const [showBillPreview, setShowBillPreview] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', details: '' });
+  const [billAddMode, setBillAddMode] = useState<'scan' | 'search' | null>(null);
   const scannerRef = useRef<any>(null);
   const { addNotification } = useNotification();
 
@@ -90,13 +91,15 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   }, []);
 
   useEffect(() => {
-    if (isOpen && isScanning && !searchMode && !showBillPreview) {
+    if (isOpen && isScanning && !searchMode && !showBillPreview && billAddMode !== 'scan') {
+      startScanner();
+    } else if (showBillPreview && billAddMode === 'scan') {
       startScanner();
     } else {
       stopScanner();
     }
     return () => { stopScanner(); };
-  }, [isOpen, isScanning, searchMode, showBillPreview, startScanner, stopScanner]);
+  }, [isOpen, isScanning, searchMode, showBillPreview, billAddMode, startScanner, stopScanner]);
 
   const handleSearch = async (term: string) => {
     if (!supabase) return;
@@ -225,6 +228,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         window.dispatchEvent(new Event('inventoryUpdated'));
         setCart([]);
         setIsScanning(true);
+        setBillAddMode(null);
       }, 2000);
     } catch (error) {
       console.error('Transaction error:', error);
@@ -255,20 +259,11 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       {showBillPreview && (
         <div className="fixed inset-0 z-[150] bg-white dark:bg-[#1a1a1a] flex flex-col">
           <div className="bg-[#072741] dark:bg-[#1e3a52] p-4 flex items-center justify-between">
-            <button onClick={() => setShowBillPreview(false)} className="text-white">
+            <button onClick={() => { setShowBillPreview(false); setBillAddMode(null); }} className="text-white">
               <X size={28} />
             </button>
             <h2 className="text-xl font-bold text-white">Bill Preview</h2>
-            <button
-              onClick={() => {
-                setShowBillPreview(false);
-                setSearchMode(true);
-                setIsScanning(false);
-              }}
-              className="bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm font-semibold"
-            >
-              + Add
-            </button>
+            <div className="w-8"></div>
           </div>
 
           <div className="flex-1 overflow-auto p-4">
@@ -306,6 +301,83 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
                 </div>
               </div>
             ))}
+
+            {/* Add More Items Section */}
+            {billAddMode === null && (
+              <div className="mt-4 p-4 bg-gray-100 dark:bg-[#2d2d2d] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <p className="text-center text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">Add More Items</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setBillAddMode('search')}
+                    className="flex-1 py-3 bg-[#348ADC] text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition"
+                  >
+                    <Search size={20} />
+                    Search Here
+                  </button>
+                  <button
+                    onClick={() => setBillAddMode('scan')}
+                    className="flex-1 py-3 bg-green-500 text-white rounded-xl font-bold active:scale-95 transition"
+                  >
+                    Scan
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Scanner in Bill */}
+            {billAddMode === 'scan' && (
+              <div className="mt-4">
+                <div id="qr-reader" className="rounded-xl overflow-hidden" style={{ minHeight: '250px' }}></div>
+                <button
+                  onClick={() => setBillAddMode(null)}
+                  className="w-full mt-3 py-3 bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 rounded-xl font-semibold"
+                >
+                  Close Scanner
+                </button>
+              </div>
+            )}
+
+            {/* Search in Bill */}
+            {billAddMode === 'search' && (
+              <div className="mt-4">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="Search by name or SKU..."
+                  className="w-full px-4 py-3 border-2 border-[#348ADC] rounded-xl mb-3"
+                  autoFocus
+                />
+                <div className="space-y-2 max-h-64 overflow-auto mb-3">
+                  {searchResults.map((item) => (
+                    <button
+                      key={item.inventory_item_id}
+                      onClick={() => addToCart(item)}
+                      className="w-full p-3 bg-gray-50 dark:bg-[#3d3d3d] rounded-xl text-left border-2 border-gray-200 dark:border-gray-700 hover:border-[#348ADC] transition active:scale-95"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="font-bold text-[#072741] dark:text-white text-sm">{item.name}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">SKU: {item.sku} | Stock: {item.quantity}</div>
+                          <div className="text-xs font-semibold text-green-600">₹{item.selling_price}</div>
+                        </div>
+                        {cart.find(c => c.inventory_item_id === item.inventory_item_id) && (
+                          <div className="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                            {cart.find(c => c.inventory_item_id === item.inventory_item_id)?.cartQuantity}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setBillAddMode(null); setSearchTerm(''); setSearchResults([]); }}
+                  className="w-full py-3 bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 rounded-xl font-semibold"
+                >
+                  Close Search
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="p-4 bg-gray-50 dark:bg-[#2d2d2d] border-t-2 border-gray-200 dark:border-gray-700">
@@ -313,28 +385,17 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
               <span className="text-lg font-bold text-[#072741] dark:text-white">Total Amount</span>
               <span className="text-2xl font-bold text-green-600">₹{totalAmount.toFixed(2)}</span>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  console.log('Back button clicked');
-                  setShowBillPreview(false);
-                }}
-                className="flex-1 py-4 rounded-2xl font-bold text-lg bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 active:scale-95 transition"
-              >
-                Back
-              </button>
-              <button
-                onClick={() => {
-                  console.log('Confirm button clicked - starting handleConfirmSale');
-                  handleConfirmSale();
-                }}
-                className={`flex-1 py-4 rounded-2xl font-bold text-lg text-white active:scale-95 transition ${
-                  mode === 'sale' ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
-                }`}
-              >
-                Confirm
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                console.log('Confirm button clicked - starting handleConfirmSale');
+                handleConfirmSale();
+              }}
+              className={`w-full py-4 rounded-2xl font-bold text-lg text-white active:scale-95 transition ${
+                mode === 'sale' ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
+              }`}
+            >
+              Confirm
+            </button>
           </div>
         </div>
       )}
