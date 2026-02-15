@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Search, Minus, Plus, Check, ShoppingCart, Trash2 } from 'lucide-react';
+import { X, Search, Minus, Plus, Check, Trash2, ScanLine } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -24,12 +24,10 @@ interface CartItem extends ScannedItem {
 export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const [mode, setMode] = useState<'sale' | 'purchase'>('sale');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isScanning, setIsScanning] = useState(true);
-  const [searchMode, setSearchMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<ScannedItem[]>([]);
-  const [companyName, setCompanyName] = useState('Arento');
-  const [showBillPreview, setShowBillPreview] = useState(false);
+  const [companyName, setCompanyName] = useState('');
+  const [userName, setUserName] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', details: '' });
   const [billAddMode, setBillAddMode] = useState<'scan' | 'search' | null>(null);
@@ -39,8 +37,9 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   useEffect(() => {
     const userData = localStorage.getItem('arento_user');
     if (userData) {
-      const { company_name } = JSON.parse(userData);
+      const { company_name, user_fullname } = JSON.parse(userData);
       if (company_name) setCompanyName(company_name);
+      if (user_fullname) setUserName(user_fullname);
     }
   }, []);
 
@@ -91,15 +90,13 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   }, []);
 
   useEffect(() => {
-    if (isOpen && isScanning && !searchMode && !showBillPreview && billAddMode !== 'scan') {
-      startScanner();
-    } else if (showBillPreview && billAddMode === 'scan') {
+    if (isOpen && billAddMode === 'scan') {
       startScanner();
     } else {
       stopScanner();
     }
     return () => { stopScanner(); };
-  }, [isOpen, isScanning, searchMode, showBillPreview, billAddMode, startScanner, stopScanner]);
+  }, [isOpen, billAddMode, startScanner, stopScanner]);
 
   const handleSearch = async (term: string) => {
     if (!supabase) return;
@@ -135,9 +132,9 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
       }
       return [...prevCart, { ...item, cartQuantity: 1 }];
     });
-    // Don't close search mode - let user keep adding items
     setSearchTerm('');
     setSearchResults([]);
+    setBillAddMode(null);
     if (navigator.vibrate) navigator.vibrate(100);
   };
 
@@ -164,29 +161,23 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   const totalItems = cart.reduce((sum, item) => sum + item.cartQuantity, 0);
 
   const handleConfirmSale = async () => {
-    console.log('Confirm button clicked');
     if (!supabase) {
-      console.error('Supabase not initialized');
       addNotification('Error', 'Database connection not available');
       return;
     }
     if (cart.length === 0) {
-      console.error('Cart is empty');
       addNotification('Error', 'Cart is empty');
       return;
     }
 
     const userData = localStorage.getItem('arento_user');
     if (!userData) {
-      console.error('User data not found');
       addNotification('Error', 'User not logged in');
       return;
     }
     const { client_id } = JSON.parse(userData);
-    console.log('User data:', { client_id });
 
     try {
-      // Check stock availability
       for (const item of cart) {
         if (mode === 'sale' && item.quantity < item.cartQuantity) {
           addNotification('Insufficient Stock', `Only ${item.quantity} units of ${item.name} available`);
@@ -194,8 +185,6 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         }
       }
 
-      console.log('Updating inventory...');
-      // Update inventory quantities
       for (const item of cart) {
         const newQuantity = mode === 'sale'
           ? item.quantity - item.cartQuantity
@@ -220,18 +209,14 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         details: message
       });
       setShowSuccessPopup(true);
-      setShowBillPreview(false);
 
-      console.log('Success! Resetting in 2 seconds...');
       setTimeout(() => {
         setShowSuccessPopup(false);
         window.dispatchEvent(new Event('inventoryUpdated'));
         setCart([]);
-        setIsScanning(true);
         setBillAddMode(null);
       }, 2000);
     } catch (error) {
-      console.error('Transaction error:', error);
       addNotification('Error', `Failed to process transaction: ${error}`);
     }
   };
@@ -239,7 +224,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-white dark:bg-[#1a1a1a] z-[100] flex flex-col">
+    <div className="h-full bg-white dark:bg-[#1a1a1a] flex flex-col">
       {/* Success Popup */}
       {showSuccessPopup && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
@@ -255,227 +240,142 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
         </div>
       )}
 
-      {/* Bill Preview Modal */}
-      {showBillPreview && (
-        <div className="fixed inset-0 z-[150] bg-white dark:bg-[#1a1a1a] flex flex-col">
-          <div className="bg-[#072741] dark:bg-[#1e3a52] p-4 flex items-center justify-between">
-            <button onClick={() => { setShowBillPreview(false); setBillAddMode(null); }} className="text-white">
-              <X size={28} />
-            </button>
-            <h2 className="text-xl font-bold text-white">Bill Preview</h2>
-            <div className="w-8"></div>
-          </div>
-
-          <div className="flex-1 overflow-auto p-4">
-            {cart.map((item) => (
-              <div key={item.inventory_item_id} className="bg-gray-50 dark:bg-[#2d2d2d] p-4 rounded-xl mb-3 border-2 border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <h4 className="font-bold text-[#072741] dark:text-white">{item.name}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">SKU: {item.sku}</p>
-                  </div>
-                  <button onClick={() => removeFromCart(item.inventory_item_id)} className="text-red-500 p-1">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateCartQuantity(item.inventory_item_id, item.cartQuantity - 1)}
-                      className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <span className="w-10 text-center font-bold text-[#072741] dark:text-white">{item.cartQuantity}</span>
-                    <button
-                      onClick={() => updateCartQuantity(item.inventory_item_id, item.cartQuantity + 1)}
-                      className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">₹{mode === 'sale' ? item.selling_price : item.cost_price} × {item.cartQuantity}</p>
-                    <p className="font-bold text-green-600">₹{((mode === 'sale' ? item.selling_price : item.cost_price) * item.cartQuantity).toFixed(2)}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Add More Items Section */}
-            {billAddMode === null && (
-              <div className="mt-4 p-4 bg-gray-100 dark:bg-[#2d2d2d] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
-                <p className="text-center text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">Add More Items</p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setBillAddMode('search')}
-                    className="flex-1 py-3 bg-[#348ADC] text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition"
-                  >
-                    <Search size={20} />
-                    Search Here
-                  </button>
-                  <button
-                    onClick={() => setBillAddMode('scan')}
-                    className="flex-1 py-3 bg-green-500 text-white rounded-xl font-bold active:scale-95 transition"
-                  >
-                    Scan
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Scanner in Bill */}
-            {billAddMode === 'scan' && (
-              <div className="mt-4">
-                <div id="qr-reader" className="rounded-xl overflow-hidden" style={{ minHeight: '250px' }}></div>
-                <button
-                  onClick={() => setBillAddMode(null)}
-                  className="w-full mt-3 py-3 bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 rounded-xl font-semibold"
-                >
-                  Close Scanner
-                </button>
-              </div>
-            )}
-
-            {/* Search in Bill */}
-            {billAddMode === 'search' && (
-              <div className="mt-4">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  placeholder="Search by name or SKU..."
-                  className="w-full px-4 py-3 border-2 border-[#348ADC] rounded-xl mb-3"
-                  autoFocus
-                />
-                <div className="space-y-2 max-h-64 overflow-auto mb-3">
-                  {searchResults.map((item) => (
-                    <button
-                      key={item.inventory_item_id}
-                      onClick={() => addToCart(item)}
-                      className="w-full p-3 bg-gray-50 dark:bg-[#3d3d3d] rounded-xl text-left border-2 border-gray-200 dark:border-gray-700 hover:border-[#348ADC] transition active:scale-95"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="font-bold text-[#072741] dark:text-white text-sm">{item.name}</div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">SKU: {item.sku} | Stock: {item.quantity}</div>
-                          <div className="text-xs font-semibold text-green-600">₹{item.selling_price}</div>
-                        </div>
-                        {cart.find(c => c.inventory_item_id === item.inventory_item_id) && (
-                          <div className="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                            {cart.find(c => c.inventory_item_id === item.inventory_item_id)?.cartQuantity}
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => { setBillAddMode(null); setSearchTerm(''); setSearchResults([]); }}
-                  className="w-full py-3 bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 rounded-xl font-semibold"
-                >
-                  Close Search
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 bg-gray-50 dark:bg-[#2d2d2d] border-t-2 border-gray-200 dark:border-gray-700">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-lg font-bold text-[#072741] dark:text-white">Total Amount</span>
-              <span className="text-2xl font-bold text-green-600">₹{totalAmount.toFixed(2)}</span>
-            </div>
-            <button
-              onClick={() => {
-                console.log('Confirm button clicked - starting handleConfirmSale');
-                handleConfirmSale();
-              }}
-              className={`w-full py-4 rounded-2xl font-bold text-lg text-white active:scale-95 transition ${
-                mode === 'sale' ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
-              }`}
-            >
-              Confirm
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
-      <div className="bg-[#072741] dark:bg-[#1e3a52] p-4 flex items-center justify-between">
+      <div className="bg-[#6366f1] p-5">
         <div>
-          <h2 className="text-xl font-bold text-white">{companyName}</h2>
-          <p className="text-xs text-white/70">Quick Scan</p>
+          <h1 className="text-2xl font-bold text-white">Arento</h1>
+          <p className="text-sm text-white/90 mt-0.5">{companyName}</p>
+          <p className="text-xs text-white/70 mt-0.5">{userName}</p>
         </div>
-        <button onClick={onClose} className="text-white">
-          <X size={28} />
-        </button>
       </div>
 
       {/* Mode Toggle */}
-      <div className="p-4 bg-gray-50 dark:bg-[#2d2d2d]">
-        <div className="flex gap-2">
+      <div className="p-4 bg-white dark:bg-[#1a1a1a]">
+        <div className="flex gap-3 bg-gray-100 dark:bg-[#2d2d2d] p-1.5 rounded-2xl">
           <button
             onClick={() => setMode('sale')}
-            className={`flex-1 py-4 rounded-xl font-bold text-lg transition ${
-              mode === 'sale' ? 'bg-green-500 text-white' : 'bg-white dark:bg-[#3d3d3d] text-gray-600 dark:text-gray-300'
+            className={`flex-1 py-3 rounded-xl font-semibold text-base transition-all ${
+              mode === 'sale' ? 'bg-green-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-400'
             }`}
           >
-            SALE
+            Sale
           </button>
           <button
             onClick={() => setMode('purchase')}
-            className={`flex-1 py-4 rounded-xl font-bold text-lg transition ${
-              mode === 'purchase' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-[#3d3d3d] text-gray-600 dark:text-gray-300'
+            className={`flex-1 py-3 rounded-xl font-semibold text-base transition-all ${
+              mode === 'purchase' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-400'
             }`}
           >
-            PURCHASE
+            Purchase
           </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        {isScanning && !searchMode ? (
-          <div className="flex flex-col h-full">
-            <div id="qr-reader" className="flex-1"></div>
-            <div className="p-4 space-y-2">
+      {/* Bill Page - Main Content */}
+      <div className="flex-1 overflow-auto p-4 bg-gray-50 dark:bg-[#0d0d0d]">
+        {/* Cart Items */}
+        {cart.map((item) => (
+          <div key={item.inventory_item_id} className="bg-white dark:bg-[#1e1e1e] p-4 rounded-2xl mb-3 shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900 dark:text-white text-base">{item.name}</h4>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">SKU: {item.sku}</p>
+              </div>
+              <button onClick={() => removeFromCart(item.inventory_item_id)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-full transition">
+                <Trash2 size={16} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => updateCartQuantity(item.inventory_item_id, item.cartQuantity - 1)}
+                  className="w-9 h-9 bg-red-500 rounded-xl flex items-center justify-center text-white shadow-sm active:scale-95 transition"
+                >
+                  <Minus size={16} />
+                </button>
+                <span className="w-12 text-center font-bold text-gray-900 dark:text-white text-lg">{item.cartQuantity}</span>
+                <button
+                  onClick={() => updateCartQuantity(item.inventory_item_id, item.cartQuantity + 1)}
+                  className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-sm active:scale-95 transition"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400 dark:text-gray-500">₹{mode === 'sale' ? item.selling_price : item.cost_price} × {item.cartQuantity}</p>
+                <p className="font-bold text-green-600 text-lg mt-0.5">₹{((mode === 'sale' ? item.selling_price : item.cost_price) * item.cartQuantity).toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Add Items Section */}
+        {billAddMode === null && (
+          <div className="mt-2 p-5 bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 shadow-sm">
+            <p className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
+              {cart.length === 0 ? 'Add Items to Bill' : 'Add More Items'}
+            </p>
+            <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setSearchMode(true);
-                  setIsScanning(false);
-                }}
-                className="w-full py-4 bg-[#348ADC] text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2"
+                onClick={() => setBillAddMode('search')}
+                className="flex-1 py-4 bg-blue-500 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition shadow-md"
               >
-                <Search size={24} />
-                Search Manually
+                <Search size={20} />
+                Search
+              </button>
+              <button
+                onClick={() => setBillAddMode('scan')}
+                className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition shadow-md"
+              >
+                <ScanLine size={20} />
+                Scan
               </button>
             </div>
           </div>
-        ) : searchMode ? (
-          <div className="p-4 flex flex-col h-full">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search by name or SKU..."
-              className="w-full px-4 py-4 border-2 border-[#348ADC] rounded-xl text-lg mb-4"
-              autoFocus
-            />
-            <div className="flex-1 overflow-auto space-y-2 mb-4">
+        )}
+
+        {/* Scanner */}
+        {billAddMode === 'scan' && (
+          <div className="mt-2">
+            <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-lg border-2 border-green-200 dark:border-green-800" style={{ minHeight: '250px' }}></div>
+            <button
+              onClick={() => setBillAddMode(null)}
+              className="w-full mt-4 py-3 bg-white dark:bg-[#2d2d2d] text-gray-700 dark:text-gray-300 rounded-2xl font-semibold border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition"
+            >
+              Close Scanner
+            </button>
+          </div>
+        )}
+
+        {/* Search */}
+        {billAddMode === 'search' && (
+          <div className="mt-2">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Search by name or SKU..."
+                className="w-full pl-12 pr-4 py-4 border-2 border-blue-200 dark:border-blue-800 rounded-2xl mb-3 text-base focus:border-blue-500 dark:focus:border-blue-600 focus:outline-none bg-white dark:bg-[#1e1e1e] shadow-sm"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2 max-h-64 overflow-auto mb-3">
               {searchResults.map((item) => (
                 <button
                   key={item.inventory_item_id}
                   onClick={() => addToCart(item)}
-                  className="w-full p-4 bg-gray-50 dark:bg-[#2d2d2d] rounded-xl text-left border-2 border-gray-200 dark:border-gray-700 hover:border-[#348ADC] transition active:scale-95"
+                  className="w-full p-4 bg-white dark:bg-[#1e1e1e] rounded-2xl text-left border border-gray-100 dark:border-gray-800 hover:border-blue-400 dark:hover:border-blue-600 transition active:scale-98 shadow-sm hover:shadow-md"
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="font-bold text-[#072741] dark:text-white">{item.name}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">SKU: {item.sku} | Stock: {item.quantity}</div>
-                      <div className="text-sm font-semibold text-green-600">₹{item.selling_price}</div>
+                      <div className="font-semibold text-gray-900 dark:text-white text-sm">{item.name}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">SKU: {item.sku} • Stock: {item.quantity}</div>
+                      <div className="text-sm font-bold text-green-600 mt-1">₹{item.selling_price}</div>
                     </div>
                     {cart.find(c => c.inventory_item_id === item.inventory_item_id) && (
-                      <div className="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                      <div className="ml-2 bg-green-500 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-sm">
                         {cart.find(c => c.inventory_item_id === item.inventory_item_id)?.cartQuantity}
                       </div>
                     )}
@@ -484,35 +384,34 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
               ))}
             </div>
             <button
-              onClick={() => {
-                setSearchMode(false);
-                setIsScanning(true);
-              }}
-              className="w-full py-3 bg-gray-200 dark:bg-[#3d3d3d] text-gray-700 dark:text-gray-300 rounded-xl font-semibold"
+              onClick={() => { setBillAddMode(null); setSearchTerm(''); setSearchResults([]); }}
+              className="w-full py-3 bg-white dark:bg-[#2d2d2d] text-gray-700 dark:text-gray-300 rounded-2xl font-semibold border-2 border-gray-200 dark:border-gray-700 active:scale-95 transition"
             >
-              Back to Scanner
+              Close Search
             </button>
           </div>
-        ) : null}
+        )}
       </div>
 
-      {/* Bottom Cart Bar */}
-      {cart.length > 0 && !showBillPreview && (
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-3 text-white">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <ShoppingCart size={20} />
-            </div>
+      {/* Footer - Total & Confirm */}
+      {cart.length > 0 && (
+        <div className="p-5 bg-white dark:bg-[#1e1e1e] border-t border-gray-200 dark:border-gray-800 shadow-2xl">
+          <div className="flex justify-between items-center mb-4">
             <div>
-              <p className="text-xs opacity-90">{totalItems} items</p>
-              <p className="text-xl font-bold">₹{totalAmount.toFixed(2)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">₹{totalAmount.toFixed(2)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 dark:text-gray-400">{totalItems} items</p>
             </div>
           </div>
           <button
-            onClick={() => setShowBillPreview(true)}
-            className="bg-white text-green-600 px-6 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition"
+            onClick={handleConfirmSale}
+            className={`w-full py-4 rounded-2xl font-bold text-lg text-white active:scale-95 transition shadow-md ${
+              mode === 'sale' ? 'bg-green-500' : 'bg-blue-500'
+            }`}
           >
-            Preview Bill
+            Confirm {mode === 'sale' ? 'Sale' : 'Purchase'}
           </button>
         </div>
       )}
