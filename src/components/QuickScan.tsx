@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
 import { X, Search, Minus, Plus, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNotification } from '../contexts/NotificationContext';
@@ -63,6 +62,7 @@ export function QuickScan({ isOpen, onClose }: QuickScanProps) {
 
   const startScanner = async () => {
     try {
+      const { Html5Qrcode } = await import('html5-qrcode');
       const scanner = new Html5Qrcode('qr-reader');
       scannerRef.current = scanner;
 
