@@ -3,6 +3,7 @@ import { SalePanel } from './SalePanel';
 import { PurchasePanel } from './PurchasePanel';
 import { StockAdjustmentPanel } from './StockAdjustmentPanel';
 import { BulkUploadPanel } from './BulkUploadPanel';
+import { QuickScan } from './QuickScan';
 
 export function FloatingActionButton() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -10,6 +11,7 @@ export function FloatingActionButton() {
   const [isPurchasePanelOpen, setIsPurchasePanelOpen] = useState(false);
   const [isStockAdjustmentPanelOpen, setIsStockAdjustmentPanelOpen] = useState(false);
   const [isBulkUploadPanelOpen, setIsBulkUploadPanelOpen] = useState(false);
+  const [isQuickScanOpen, setIsQuickScanOpen] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
   const [isHoveringButton, setIsHoveringButton] = useState(false);
 
@@ -28,6 +30,7 @@ export function FloatingActionButton() {
         setIsPurchasePanelOpen(false);
         setIsStockAdjustmentPanelOpen(false);
         setIsBulkUploadPanelOpen(false);
+        setIsQuickScanOpen(false);
         return;
       }
       const target = e.target as HTMLElement;
@@ -59,6 +62,15 @@ export function FloatingActionButton() {
         setIsSalePanelOpen(false);
         setIsPurchasePanelOpen(false);
         setIsStockAdjustmentPanelOpen(false);
+        setIsQuickScanOpen(false);
+      }
+      if (e.key.toLowerCase() === 'q') {
+        e.preventDefault();
+        setIsQuickScanOpen(true);
+        setIsSalePanelOpen(false);
+        setIsPurchasePanelOpen(false);
+        setIsStockAdjustmentPanelOpen(false);
+        setIsBulkUploadPanelOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -122,11 +134,26 @@ export function FloatingActionButton() {
               setIsSalePanelOpen(false);
               setIsPurchasePanelOpen(false);
               setIsStockAdjustmentPanelOpen(false);
+              setIsQuickScanOpen(false);
             }}
             className="bg-white text-[#072741] px-5 py-3 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition-all duration-200 text-sm font-semibold border-2 border-gray-200"
             style={{ fontFamily: 'Inter, sans-serif' }}
           >
             <span className="underline">B</span>ulk Upload <span className="text-xs text-gray-500 ml-1">(B)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setIsQuickScanOpen(true);
+              setIsSalePanelOpen(false);
+              setIsPurchasePanelOpen(false);
+              setIsStockAdjustmentPanelOpen(false);
+              setIsBulkUploadPanelOpen(false);
+            }}
+            className="bg-gradient-to-r from-green-500 to-green-600 text-white px-5 py-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-200 text-sm font-semibold border-2 border-green-400"
+            style={{ fontFamily: 'Inter, sans-serif' }}
+          >
+            <span className="underline">Q</span>uick Scan <span className="text-xs text-green-100 ml-1">(Q)</span>
           </button>
         </div>
 
@@ -150,6 +177,7 @@ export function FloatingActionButton() {
       <PurchasePanel isOpen={isPurchasePanelOpen} onClose={() => setIsPurchasePanelOpen(false)} />
       <StockAdjustmentPanel isOpen={isStockAdjustmentPanelOpen} onClose={() => setIsStockAdjustmentPanelOpen(false)} />
       <BulkUploadPanel isOpen={isBulkUploadPanelOpen} onClose={() => setIsBulkUploadPanelOpen(false)} />
+      <QuickScan isOpen={isQuickScanOpen} onClose={() => setIsQuickScanOpen(false)} />
     </>
   );
 }
