@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search } from 'lucide-react';
+import { Search, AlertTriangle, Check } from 'lucide-react';
 
 type Status = 'Healthy' | 'Low' | 'Critical';
 
@@ -95,7 +95,7 @@ export function MobileInventoryAnalysis() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#6366f1] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-[#348ADC] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 font-semibold">Loading...</p>
         </div>
       </div>
@@ -103,88 +103,103 @@ export function MobileInventoryAnalysis() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Status Summary - Horizontal Scroll */}
-      <div className="flex gap-2 overflow-x-auto pb-2 px-1 -mx-1 scrollbar-hide">
+    <div className="space-y-3">
+      {/* Status Summary - 3 Cards Per Row Grid */}
+      <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => setStatusFilter(statusFilter === 'Healthy' ? 'all' : 'Healthy')}
-          className={`flex-shrink-0 px-3 py-2 rounded-xl border-2 transition ${
+          className={`p-3 rounded-xl transition-all active:scale-95 shadow-md ${
             statusFilter === 'Healthy' 
-              ? 'bg-green-500 border-green-600 shadow-md' 
-              : 'bg-white dark:bg-[#1e1e1e] border-green-200 dark:border-green-800'
+              ? 'bg-gradient-to-br from-green-500 to-emerald-600 shadow-green-500/30' 
+              : 'bg-white dark:bg-[#1e1e1e] border-2 border-green-200 dark:border-green-800'
           }`}
         >
-          <p className={`text-xl font-bold ${statusFilter === 'Healthy' ? 'text-white' : 'text-green-600'}`}>
+          <p className={`text-2xl font-black leading-none ${statusFilter === 'Healthy' ? 'text-white' : 'text-green-600'}`}>
             {statusCounts.healthy}
           </p>
-          <p className={`text-[10px] font-medium mt-0.5 ${statusFilter === 'Healthy' ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+          <p className={`text-[9px] font-bold mt-1.5 leading-tight ${statusFilter === 'Healthy' ? 'text-white/90' : 'text-gray-600 dark:text-gray-400'}`}>
             Healthy
           </p>
         </button>
 
         <button
           onClick={() => setStatusFilter(statusFilter === 'Low' ? 'all' : 'Low')}
-          className={`flex-shrink-0 px-3 py-2 rounded-xl border-2 transition ${
+          className={`p-3 rounded-xl transition-all active:scale-95 shadow-md ${
             statusFilter === 'Low' 
-              ? 'bg-yellow-500 border-yellow-600 shadow-md' 
-              : 'bg-white dark:bg-[#1e1e1e] border-yellow-200 dark:border-yellow-800'
+              ? 'bg-gradient-to-br from-yellow-500 to-yellow-600 shadow-yellow-500/30' 
+              : 'bg-white dark:bg-[#1e1e1e] border-2 border-yellow-200 dark:border-yellow-800'
           }`}
         >
-          <p className={`text-xl font-bold ${statusFilter === 'Low' ? 'text-white' : 'text-yellow-600'}`}>
+          <p className={`text-2xl font-black leading-none ${statusFilter === 'Low' ? 'text-white' : 'text-yellow-600'}`}>
             {statusCounts.low}
           </p>
-          <p className={`text-[10px] font-medium mt-0.5 ${statusFilter === 'Low' ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+          <p className={`text-[9px] font-bold mt-1.5 leading-tight ${statusFilter === 'Low' ? 'text-white/90' : 'text-gray-600 dark:text-gray-400'}`}>
             Low Stock
           </p>
         </button>
 
         <button
           onClick={() => setStatusFilter(statusFilter === 'Critical' ? 'all' : 'Critical')}
-          className={`flex-shrink-0 px-3 py-2 rounded-xl border-2 transition ${
+          className={`p-3 rounded-xl transition-all active:scale-95 shadow-md ${
             statusFilter === 'Critical' 
-              ? 'bg-orange-500 border-orange-600 shadow-md' 
-              : 'bg-white dark:bg-[#1e1e1e] border-orange-200 dark:border-orange-800'
+              ? 'bg-gradient-to-br from-orange-500 to-red-500 shadow-orange-500/30' 
+              : 'bg-white dark:bg-[#1e1e1e] border-2 border-orange-200 dark:border-orange-800'
           }`}
         >
-          <p className={`text-xl font-bold ${statusFilter === 'Critical' ? 'text-white' : 'text-orange-600'}`}>
+          <p className={`text-2xl font-black leading-none ${statusFilter === 'Critical' ? 'text-white' : 'text-orange-600'}`}>
             {statusCounts.critical}
           </p>
-          <p className={`text-[10px] font-medium mt-0.5 ${statusFilter === 'Critical' ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+          <p className={`text-[9px] font-bold mt-1.5 leading-tight ${statusFilter === 'Critical' ? 'text-white/90' : 'text-gray-600 dark:text-gray-400'}`}>
             Critical
-          </p>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === 'OutOfStock' ? 'all' : 'OutOfStock')}
-          className={`flex-shrink-0 px-3 py-2 rounded-xl border-2 transition ${
-            statusFilter === 'OutOfStock' 
-              ? 'bg-red-500 border-red-600 shadow-md' 
-              : 'bg-white dark:bg-[#1e1e1e] border-red-200 dark:border-red-800'
-          }`}
-        >
-          <p className={`text-xl font-bold ${statusFilter === 'OutOfStock' ? 'text-white' : 'text-red-600'}`}>
-            {statusCounts.outOfStock}
-          </p>
-          <p className={`text-[10px] font-medium mt-0.5 ${statusFilter === 'OutOfStock' ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
-            Out of Stock
           </p>
         </button>
       </div>
 
-      {/* Search Bar */}
+      {/* Out of Stock - Full Width */}
+      <button
+        onClick={() => setStatusFilter(statusFilter === 'OutOfStock' ? 'all' : 'OutOfStock')}
+        className={`w-full p-3 rounded-xl transition-all active:scale-95 shadow-md flex items-center justify-between ${
+          statusFilter === 'OutOfStock' 
+            ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-red-500/30' 
+            : 'bg-white dark:bg-[#1e1e1e] border-2 border-red-200 dark:border-red-800'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            statusFilter === 'OutOfStock' ? 'bg-white/20' : 'bg-red-100 dark:bg-red-900/30'
+          }`}>
+            <AlertTriangle size={20} className={statusFilter === 'OutOfStock' ? 'text-white' : 'text-red-600'} strokeWidth={2.5} />
+          </div>
+          <div className="text-left">
+            <p className={`text-2xl font-black leading-none ${statusFilter === 'OutOfStock' ? 'text-white' : 'text-red-600'}`}>
+              {statusCounts.outOfStock}
+            </p>
+            <p className={`text-[9px] font-bold mt-1 ${statusFilter === 'OutOfStock' ? 'text-white/90' : 'text-gray-600 dark:text-gray-400'}`}>
+              Out of Stock Items
+            </p>
+          </div>
+        </div>
+        {statusFilter === 'OutOfStock' && (
+          <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+            <Check size={14} className="text-white" strokeWidth={3} />
+          </div>
+        )}
+      </button>
+
+      {/* Search Bar - Compact */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
         <input
           type="text"
           placeholder="Search items..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-2xl text-base focus:border-[#6366f1] focus:outline-none bg-white dark:bg-[#1e1e1e]"
+          className="w-full pl-10 pr-3 py-3 border-2 border-[#348ADC]/30 dark:border-[#348ADC]/50 rounded-xl text-sm focus:border-[#348ADC] focus:outline-none bg-white dark:bg-[#1e1e1e] shadow-sm focus:shadow-md transition-all"
         />
       </div>
 
-      {/* Inventory Cards - Vertical Stack */}
-      <div className="space-y-2">
+      {/* Inventory Cards - 3 Per Row Grid */}
+      <div className="grid grid-cols-3 gap-2">
         {filteredData.map((item, idx) => {
           const status = getStatus(item);
           const progress = getProgressPercentage(item);
@@ -192,72 +207,67 @@ export function MobileInventoryAnalysis() {
           return (
             <div
               key={idx}
-              className={`rounded-xl p-3 border-2 shadow-sm ${getCardBackground(progress)}`}
+              className={`rounded-lg p-1.5 border shadow-md hover:shadow-lg active:scale-95 transition-all ${getCardBackground(progress)}`}
             >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight line-clamp-1">
-                    {item.name}
-                  </h3>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">SKU: {item.sku}</p>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ml-2 flex-shrink-0 ${
-                  item.quantity === 0 ? 'bg-red-500 text-white' :
+              {/* Status Badge */}
+              <div className="flex justify-center mb-1">
+                <span className={`px-1.5 py-0.5 rounded text-[7px] font-black shadow-sm ${
+                  item.quantity === 0 ? 'bg-gradient-to-r from-red-500 to-red-600 text-white' :
                   status === 'Critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' :
                   status === 'Low' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300' :
                   'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
                 }`}>
-                  {item.quantity === 0 ? 'Out' : status}
+                  {item.quantity === 0 ? 'OUT' : status.toUpperCase()}
                 </span>
               </div>
 
-              {/* Quantity & Progress */}
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex items-baseline">
-                  <span className={`text-2xl font-bold ${
-                    status === 'Critical' ? 'text-red-600 dark:text-red-400' :
-                    status === 'Low' ? 'text-yellow-600 dark:text-yellow-400' :
-                    'text-green-600 dark:text-green-400'
-                  }`}>
-                    {item.quantity}
-                  </span>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-1">units</span>
-                </div>
-                
-                {/* Progress Bar */}
-                <div className="flex-1 relative bg-white/50 dark:bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className={`absolute top-0 left-0 h-full rounded-full transition-all ${
-                      progress <= 20 ? 'bg-red-500' :
-                      progress <= 30 ? 'bg-red-400' :
-                      progress <= 40 ? 'bg-orange-400' :
-                      progress <= 50 ? 'bg-yellow-400' :
-                      progress <= 60 ? 'bg-yellow-300' :
-                      progress <= 70 ? 'bg-lime-400' :
-                      progress <= 80 ? 'bg-green-400' :
-                      'bg-green-500'
-                    }`}
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
+              {/* Item Name */}
+              <h3 className="font-black text-gray-900 dark:text-white text-[9px] leading-tight text-center mb-1 line-clamp-2 min-h-[22px]">
+                {item.name}
+              </h3>
+
+              {/* Quantity */}
+              <div className="text-center mb-1">
+                <span className={`text-lg font-black leading-none ${
+                  status === 'Critical' ? 'text-red-600 dark:text-red-400' :
+                  status === 'Low' ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-green-600 dark:text-green-400'
+                }`}>
+                  {item.quantity}
+                </span>
               </div>
 
+              {/* Progress Bar */}
+              <div className="relative bg-white/60 dark:bg-gray-700/50 rounded-full h-1 overflow-hidden shadow-inner mb-1">
+                <div
+                  className={`absolute top-0 left-0 h-full rounded-full transition-all ${
+                    progress <= 20 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                    progress <= 30 ? 'bg-gradient-to-r from-red-400 to-red-500' :
+                    progress <= 40 ? 'bg-gradient-to-r from-orange-400 to-orange-500' :
+                    progress <= 50 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
+                    progress <= 60 ? 'bg-gradient-to-r from-yellow-300 to-yellow-400' :
+                    progress <= 70 ? 'bg-gradient-to-r from-lime-400 to-lime-500' :
+                    progress <= 80 ? 'bg-gradient-to-r from-green-400 to-green-500' :
+                    'bg-gradient-to-r from-green-500 to-emerald-600'
+                  }`}
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              {/* Percentage */}
+              <p className="text-center text-[7px] font-black text-gray-600 dark:text-gray-400 mb-1">
+                {Math.round(progress)}%
+              </p>
+
               {/* Footer Stats */}
-              <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-center flex-1">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Min</p>
-                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{item.min_stock}</p>
+              <div className="pt-1 border-t border-gray-200/50 dark:border-gray-700/50 space-y-0.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[7px] text-gray-500 dark:text-gray-400 font-bold">Min</span>
+                  <span className="text-[8px] font-black text-gray-700 dark:text-gray-300">{item.min_stock}</span>
                 </div>
-                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
-                <div className="text-center flex-1">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Normal</p>
-                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{item.normal_stock}</p>
-                </div>
-                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
-                <div className="text-center flex-1">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Category</p>
-                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">{item.category}</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-[7px] text-gray-500 dark:text-gray-400 font-bold">Max</span>
+                  <span className="text-[8px] font-black text-gray-700 dark:text-gray-300">{item.normal_stock}</span>
                 </div>
               </div>
             </div>
@@ -267,7 +277,11 @@ export function MobileInventoryAnalysis() {
 
       {filteredData.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-400 dark:text-gray-500">No items found</p>
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Search size={28} className="text-gray-400" />
+          </div>
+          <p className="text-gray-400 dark:text-gray-500 font-bold text-sm">No items found</p>
+          <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">Try adjusting your filters</p>
         </div>
       )}
     </div>
